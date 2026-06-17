@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nesting Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#FF385C; --dark:#1A1A1A; --mid:#484848; --gray:#717171;
+  --muted:#B0B0B0; --border:#E8E8E8; --surface:#F7F7F7; --bg:#FFFFFF;
+  --green:#00843D; --green-bg:#E6F4EC; --yellow:#B76E00; --yellow-bg:#FFF4E0;
+  --red:#C13515; --red-bg:#FDECEA;
+  --sh-sm:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --sh-lg:0 12px 32px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--surface);color:var(--dark);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+/* ── HEADER ── */
+.hdr{background:var(--bg);border-bottom:1px solid var(--border);padding:0 40px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:var(--sh-sm);}
+.hdr-left{display:flex;align-items:center;gap:12px;}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.logo svg{width:18px;height:18px;fill:#fff;}
+.hdr-title{font-size:15px;font-weight:700;letter-spacing:-.2px;}
+.hdr-sep{width:1px;height:18px;background:var(--border);}
+.hdr-sub{font-size:13px;color:var(--gray);font-weight:500;}
+.hdr-pill{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--mid);display:flex;align-items:center;gap:6px;}
+.hdr-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+/* ── SECTION TABS ── */
+.sec-tabs{background:var(--bg);border-bottom:1px solid var(--border);padding:0 40px;display:flex;gap:0;position:sticky;top:60px;z-index:200;}
+.sec-tab{padding:14px 20px;font-size:14px;font-weight:600;color:var(--gray);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.sec-tab:hover{color:var(--mid);}
+.sec-tab.active{color:var(--dark);border-bottom-color:var(--brand);}
+.sec-tab .tab-icon{font-size:15px;}
+.sec-tab .tab-badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1px 7px;font-size:11px;font-weight:700;color:var(--gray);}
+.sec-tab.active .tab-badge{background:var(--brand);border-color:var(--brand);color:#fff;}
+
+/* ── WEEK NAV (Week by Week section) ── */
+.week-nav{background:var(--bg);border-bottom:1px solid var(--border);padding:10px 40px;display:flex;align-items:center;gap:12px;}
+.week-nav-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.week-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:3px;}
+.week-tab{padding:5px 16px;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--gray);border:none;background:none;transition:all .15s;}
+.week-tab.active{background:var(--bg);color:var(--dark);box-shadow:var(--sh-sm);}
+
+/* ── MAIN ── */
+.main{padding:28px 40px;max-width:1480px;margin:0 auto;}
+.section{display:none;}
+.section.active{display:block;}
+
+/* ── SUMMARY CARDS ── */
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.sc{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:20px 22px;box-shadow:var(--sh-sm);transition:box-shadow .2s,transform .2s;}
+.sc:hover{box-shadow:var(--sh-md);transform:translateY(-1px);}
+.sc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:14px;}
+.sc-icon.blue{background:#EEF4FF;} .sc-icon.purple{background:#F3EEFF;}
+.sc-icon.green{background:var(--green-bg);} .sc-icon.red{background:var(--red-bg);}
+.sc-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+.sc-value{font-size:30px;font-weight:800;letter-spacing:-.5px;line-height:1;margin-bottom:5px;}
+.sc-sub{font-size:12px;color:var(--gray);}
+
+/* ── SECTION HEADER ── */
+.sechdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sechdr h2{font-size:15px;font-weight:700;}
+.sechdr .hint{font-size:12px;color:var(--gray);display:flex;align-items:center;gap:4px;}
+
+/* ── CARD WRAPPER ── */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-sm);}
+.card-pad{padding:22px 24px;}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+thead th:hover{color:var(--dark);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#FAFAFA;}
+tbody td{padding:12px 14px;vertical-align:middle;}
+.rank-num{font-size:13px;font-weight:700;color:var(--muted);text-align:center;}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0;box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(0,0,0,.08);}
+.agent-cell{display:flex;align-items:center;gap:10px;min-width:150px;}
+.agent-name{font-weight:600;font-size:13px;} .agent-sub{font-size:11px;color:var(--muted);}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:4px 10px;border-radius:20px;font-weight:700;font-size:13px;}
+.badge.green{background:var(--green-bg);color:var(--green);}
+.badge.yellow{background:var(--yellow-bg);color:var(--yellow);}
+.badge.red{background:var(--red-bg);color:var(--red);}
+.mv{font-size:13px;font-weight:600;}
+.mv.good{color:var(--green);} .mv.warn{color:var(--yellow);} .mv.bad{color:var(--red);} .mv.na{color:var(--muted);font-size:12px;font-weight:400;}
+.prog-wrap{display:flex;align-items:center;gap:6px;min-width:90px;}
+.prog-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:3px;}
+.prog-fill.green{background:var(--green);} .prog-fill.yellow{background:#E6A817;} .prog-fill.red{background:var(--red);}
+.prog-lbl{font-size:12px;font-weight:600;min-width:32px;text-align:right;}
+
+/* ── METRIC GRID (cohort averages) ── */
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.mi{padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);}
+.mi-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.mi-val{font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1.1;}
+.mi-tgt{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* ── TWO COL ── */
+.two-col{display:grid;grid-template-columns:1fr 1.5fr;gap:16px;margin-bottom:28px;}
+.risk-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.risk-item:last-child{border-bottom:none;}
+.risk-dot{position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-radius:50%;border:2px solid #fff;}
+.risk-dot.red{background:var(--red);} .risk-dot.yellow{background:#E6A817;}
+.risk-name{font-weight:600;font-size:13px;} .risk-issue{font-size:11px;color:var(--gray);margin-top:1px;}
+.risk-tag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.risk-tag.red{background:var(--red-bg);color:var(--red);} .risk-tag.yellow{background:var(--yellow-bg);color:var(--yellow);}
+.empty-ok{color:var(--green);font-size:13px;font-weight:600;padding:16px 0;display:flex;align-items:center;gap:8px;}
+
+/* ══════════════════════════════════
+   WEEK BY WEEK SECTION
+══════════════════════════════════ */
+.wbw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+
+/* Cohort trend chart */
+.trend-card{padding:22px 24px;}
+.chart-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+
+/* Week comparison table */
+.wbw-compare{margin-bottom:24px;}
+.wbw-tbl-wrap{overflow-x:auto;}
+.wbw-table{width:100%;border-collapse:collapse;font-size:13px;}
+.wbw-table thead th{padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--surface);border-bottom:1px solid var(--border);white-space:nowrap;}
+.wbw-table thead th.wk-header{text-align:center;min-width:90px;}
+.wbw-table tbody tr{border-bottom:1px solid var(--border);}
+.wbw-table tbody tr:last-child{border-bottom:none;}
+.wbw-table tbody td{padding:10px 14px;vertical-align:middle;}
+.wbw-table tbody td.wk-cell{text-align:center;}
+.metric-name-cell{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;}
+.metric-dir{font-size:10px;color:var(--muted);font-weight:500;}
+.wk-val{display:inline-flex;flex-direction:column;align-items:center;gap:2px;}
+.wk-num{font-size:13px;font-weight:700;}
+.wk-num.good{color:var(--green);} .wk-num.warn{color:var(--yellow);} .wk-num.bad{color:var(--red);} .wk-num.na{color:var(--muted);font-size:12px;font-weight:400;}
+.wk-tgt{font-size:10px;color:var(--muted);font-weight:500;}
+.wk-na{color:var(--muted);font-size:12px;}
+
+/* Week summary cards */
+.week-sum-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.wsc{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;box-shadow:var(--sh-sm);transition:all .15s;cursor:pointer;}
+.wsc:hover,.wsc.active{border-color:var(--brand);box-shadow:var(--sh-md);}
+.wsc.active{background:linear-gradient(135deg,#fff5f6 0%,#fff 100%);}
+.wsc-wk{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.wsc-score{font-size:24px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;}
+.wsc-delta{font-size:12px;font-weight:600;}
+.wsc-delta.up{color:var(--green);} .wsc-delta.down{color:var(--red);} .wsc-delta.flat{color:var(--muted);}
+.wsc-agents{font-size:11px;color:var(--gray);margin-top:4px;}
+
+/* ══════════════════════════════════
+   SPECIALIST SECTION
+══════════════════════════════════ */
+.spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;}
+.spec-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:20px;box-shadow:var(--sh-sm);cursor:pointer;transition:all .2s;}
+.spec-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px);border-color:rgba(0,0,0,.12);}
+.spec-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.spec-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px #fff,0 0 0 4px rgba(0,0,0,.08);}
+.spec-name{font-weight:700;font-size:14px;letter-spacing:-.1px;}
+.spec-rank{font-size:11px;color:var(--gray);margin-top:2px;}
+.spec-score-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.spec-score-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.spec-score-val{font-size:22px;font-weight:800;letter-spacing:-.4px;}
+.spec-score-trend{font-size:12px;font-weight:600;margin-left:6px;}
+.spec-metrics{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;}
+.spm{background:var(--surface);border-radius:6px;padding:7px 10px;}
+.spm-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.spm-val{font-size:13px;font-weight:700;}
+.spm-val.good{color:var(--green);} .spm-val.warn{color:var(--yellow);} .spm-val.bad{color:var(--red);}
+.spec-wk-row{display:flex;gap:4px;}
+.spec-wk-dot{flex:1;height:4px;border-radius:2px;}
+.spec-wk-dot.good{background:var(--green);} .spec-wk-dot.warn{background:#E6A817;} .spec-wk-dot.bad{background:var(--red);} .spec-wk-dot.gray{background:var(--border);}
+.spec-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.spec-footer-txt{font-size:11px;color:var(--gray);}
+.spec-footer-btn{font-size:11px;font-weight:600;color:var(--brand);background:none;border:none;cursor:pointer;padding:0;}
+
+/* ══════════════════════════════════
+   DRILL-DOWN PANEL
+══════════════════════════════════ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.panel{position:fixed;top:0;right:0;width:700px;max-width:100vw;height:100vh;background:var(--bg);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:var(--sh-lg);}
+.panel.open{transform:translateX(0);}
+.panel-hdr{padding:22px 28px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;position:sticky;top:0;background:var(--bg);z-index:10;}
+.panel-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;box-shadow:0 0 0 3px #fff,0 0 0 4px rgba(0,0,0,.1);}
+.panel-name{font-size:17px;font-weight:700;letter-spacing:-.2px;}
+.panel-sub{font-size:12px;color:var(--gray);margin-top:2px;}
+.panel-close{margin-left:auto;background:var(--surface);border:1px solid var(--border);cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--gray);transition:all .15s;}
+.panel-close:hover{background:var(--border);color:var(--dark);}
+.panel-body{padding:22px 28px;}
+.wsr-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px;}
+.wsr{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 8px;text-align:center;}
+.wsr.cur{border-color:var(--dark);background:var(--bg);box-shadow:var(--sh-sm);}
+.wsr-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;}
+.wsr-sc{font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1;}
+.wsr-d{font-size:11px;font-weight:600;margin-top:4px;}
+.wsr-d.up{color:var(--green);} .wsr-d.down{color:var(--red);} .wsr-d.flat{color:var(--muted);}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px 12px;margin-bottom:20px;}
+.mb-title{font-size:14px;font-weight:700;margin-bottom:12px;}
+.mb-tbl{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;}
+.mb-row{display:grid;grid-template-columns:130px repeat(4,1fr) 80px;border-bottom:1px solid var(--border);}
+.mb-row:last-child{border-bottom:none;}
+.mb-row.hdr{background:var(--surface);}
+.mb-cell{padding:9px 10px;font-size:12px;}
+.mb-cell.center{text-align:center;}
+.mb-cell.right{text-align:right;}
+.mb-cell-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.mb-metric{font-weight:600;color:var(--dark);}
+.mb-val{font-weight:700;display:block;text-align:center;}
+.mb-val.good{color:var(--green);} .mb-val.warn{color:var(--yellow);} .mb-val.bad{color:var(--red);} .mb-val.na{color:var(--muted);font-weight:400;font-style:italic;}
+.mb-tgt-lbl{font-size:10px;color:var(--muted);font-weight:500;}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo"><svg viewBox="0 0 32 32"><path d="M16 1C7.7 1 1 7.7 1 16s6.7 15 15 15 15-6.7 15-15S24.3 1 16 1zm0 6c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm0 18c-3.3 0-6.2-1.7-8-4.3.1-2.7 5.3-4.1 8-4.1s7.9 1.4 8 4.1C22.2 23.3 19.3 25 16 25z"/></svg></div>
+    <span class="hdr-title">Nesting Performance</span>
+    <div class="hdr-sep"></div>
+    <span class="hdr-sub">Agent Dashboard</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="hdr-pill"><span id="hdr-meta">June 2026 Cohort · 4 Weeks · Jun 17, 2026</span></div>
+    <span id="last-updated" style="font-size:11px;color:var(--muted)"></span>
+    <button onclick="refresh()" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:12px;font-weight:600;color:var(--mid);cursor:pointer;font-family:inherit">↻ Refresh</button>
+  </div>
+</div>
+<div id="data-banner" style="display:none;align-items:center;justify-content:center;padding:8px 40px;font-size:13px;font-weight:500;border-bottom:1px solid var(--border)"></div>
+
+<!-- ═══ SECTION TABS ═══ -->
+<div class="sec-tabs">
+  <button class="sec-tab active" onclick="showSection('overall',this)">
+    <span class="tab-icon">📊</span> Overall Performance <span class="tab-badge" id="tab-badge-overall">…</span>
+  </button>
+  <button class="sec-tab" onclick="showSection('wbw',this)">
+    <span class="tab-icon">📅</span> Week by Week
+  </button>
+  <button class="sec-tab" onclick="showSection('specialist',this)">
+    <span class="tab-icon">👤</span> Specialist View <span class="tab-badge" id="tab-badge-spec">…</span>
+  </button>
+</div>
+
+<!-- ═══ WEEK NAV (Week by Week only) ═══ -->
+<div class="week-nav" id="week-nav" style="display:none">
+  <span class="week-nav-label">Viewing</span>
+  <div class="week-tabs">
+    <button class="week-tab active" onclick="setWbwWeek(this,1)">Week 1</button>
+    <button class="week-tab" onclick="setWbwWeek(this,2)">Week 2</button>
+    <button class="week-tab" onclick="setWbwWeek(this,3)">Week 3</button>
+    <button class="week-tab" onclick="setWbwWeek(this,4)">Week 4</button>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- ════════════════════════════
+       SECTION 1: OVERALL
+  ════════════════════════════ -->
+  <section class="section active" id="sec-overall">
+    <div class="cards-row" id="overall-cards"></div>
+
+    <div class="two-col" style="margin-bottom:28px">
+      <div class="card card-pad">
+        <div class="sechdr" style="margin-bottom:14px">
+          <h2>At-Risk Agents</h2>
+          <span class="hint" id="risk-hint">score below 65% · latest week</span>
+        </div>
+        <div id="overall-risk"></div>
+      </div>
+      <div class="card card-pad">
+        <div class="sechdr" style="margin-bottom:14px">
+          <h2>Cohort Averages</h2>
+          <span class="hint" id="cohort-avg-hint">latest week vs targets</span>
+        </div>
+        <div class="metric-grid" id="overall-metric-grid"></div>
+      </div>
+    </div>
+
+    <div class="sechdr">
+      <h2>Full Leaderboard</h2>
+      <span class="hint" id="leaderboard-hint">Latest week score · Click row for detail</span>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="tbl-wrap">
+        <table id="overall-table">
+          <thead><tr>
+            <th style="width:44px">#</th>
+            <th>Agent</th>
+            <th style="text-align:center" title="Cumulative composite score">Score</th>
+            <th title="QA assessment ≥85%">Quality</th>
+            <th title="TTR within 14 days">TTR &lt;14d</th>
+            <th title="First contact SLA ≥90%">1st Cntct SLA</th>
+            <th title="Airbnb resp SLA ≥90%">Airbnb Resp SLA</th>
+            <th title="Host appeal ≤14%">Host Appeal</th>
+            <th title="Guest appeal ≤9%">Guest Appeal</th>
+            <th title="3+ contact ≤24%">3+ Contact</th>
+            <th title="SPD ≥1.2">SPD</th>
+            <th title="Paid Host NPS ≥26">Paid Host NPS</th>
+            <th>Claims Closed</th>
+            <th>Assigned</th>
+            <th style="text-align:center">Wk1→4 Trend</th>
+          </tr></thead>
+          <tbody id="overall-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════
+       SECTION 2: WEEK BY WEEK
+  ════════════════════════════ -->
+  <section class="section" id="sec-wbw">
+
+    <!-- 4 week summary cards -->
+    <div class="week-sum-row" id="wbw-week-cards"></div>
+
+    <!-- Cohort trend + week stats side by side -->
+    <div class="wbw-grid">
+      <div class="card trend-card">
+        <div class="chart-lbl">Cohort Average Score — Week by Week</div>
+        <svg id="cohort-trend-svg" width="100%" height="160" viewBox="0 0 460 160" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="card card-pad">
+        <div class="chart-lbl" style="margin-bottom:12px">Week <span id="wbw-wk-label">1</span> — Cohort Stats</div>
+        <div class="metric-grid" id="wbw-cohort-grid"></div>
+      </div>
+    </div>
+
+    <!-- Metric vs target comparison table -->
+    <div class="sechdr">
+      <h2>Metric vs Target — All Weeks</h2>
+      <span class="hint">Cohort average · Color = vs that week's target</span>
+    </div>
+    <div class="card wbw-compare" style="margin-bottom:0">
+      <div class="wbw-tbl-wrap">
+        <table class="wbw-table">
+          <thead><tr>
+            <th style="min-width:160px">Metric</th>
+            <th class="wk-header">Week 1</th>
+            <th class="wk-header">Week 2</th>
+            <th class="wk-header">Week 3</th>
+            <th class="wk-header">Week 4</th>
+          </tr></thead>
+          <tbody id="wbw-compare-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════
+       SECTION 3: SPECIALIST
+  ════════════════════════════ -->
+  <section class="section" id="sec-specialist">
+    <div class="cards-row" id="spec-cards"></div>
+    <div class="sechdr">
+      <h2>All Specialists</h2>
+      <span class="hint">Ranked by latest week score · Click card for detail</span>
+    </div>
+    <div class="spec-grid" id="spec-grid"></div>
+  </section>
+
+</div><!-- /main -->
+
+<!-- ═══ DRILL-DOWN PANEL ═══ -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-hdr">
+    <div class="panel-av" id="panel-av"></div>
+    <div><div class="panel-name" id="panel-name"></div><div class="panel-sub" id="panel-sub"></div></div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="wsr-row" id="panel-wsr"></div>
+    <div class="chart-wrap">
+      <div class="chart-lbl">Overall Score Trend</div>
+      <svg id="panel-svg" width="100%" height="150" viewBox="0 0 620 150" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="mb-title">Week-by-Week Metric Breakdown</div>
+    <div class="mb-tbl">
+      <div class="mb-row hdr">
+        <div class="mb-cell"><span class="mb-cell-lbl">Metric</span></div>
+        <div class="mb-cell center"><span class="mb-cell-lbl">Wk 1</span></div>
+        <div class="mb-cell center"><span class="mb-cell-lbl">Wk 2</span></div>
+        <div class="mb-cell center"><span class="mb-cell-lbl">Wk 3</span></div>
+        <div class="mb-cell center"><span class="mb-cell-lbl">Wk 4</span></div>
+      </div>
+      <div id="panel-mb"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Colours ─────────────────────────────────
+const AV=['#E31C5F','#00A699','#FC642D'];
+
+// ── Targets (per nesting program spec) ───────
+const T={
+  1:{quality:85,ttr:null,host_appeal:14,spd:0.5,guest_appeal:9,fcs:90,airbnb_sla:90,three_contact:28,nps:11},
+  2:{quality:85,ttr:null,host_appeal:14,spd:1.0,guest_appeal:9,fcs:90,airbnb_sla:90,three_contact:28,nps:23},
+  3:{quality:85,ttr:45,  host_appeal:14,spd:1.5,guest_appeal:9,fcs:90,airbnb_sla:90,three_contact:20,nps:34},
+  4:{quality:85,ttr:60,  host_appeal:14,spd:2.0,guest_appeal:9,fcs:90,airbnb_sla:90,three_contact:20,nps:45},
+};
+
+// ── Fallback data (last known good — updated from sheet on load) ──
+const FALLBACK={
+  1:[
+    {name:'Varun Shukla',   quality:92.86,ttr:100, fcs:77.8, airbnb_sla:94.7, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:12},
+    {name:'Pratyush Shahi', quality:92.86,ttr:100, fcs:62.5, airbnb_sla:100,  host_appeal:33.3, guest_appeal:null, three_contact:null, spd:0.7,  nps:null, closed:3,    assigned:10},
+    {name:'Arushi Rajput',  quality:91.67,ttr:75,  fcs:72.7, airbnb_sla:100,  host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:10},
+  ],
+  2:[
+    {name:'Varun Shukla',   quality:null, ttr:100,  fcs:28.6, airbnb_sla:94.4, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:10},
+    {name:'Pratyush Shahi', quality:null, ttr:100,  fcs:75,   airbnb_sla:76.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:0.7,  nps:null, closed:3,    assigned:9},
+    {name:'Arushi Rajput',  quality:null, ttr:85.7, fcs:60,   airbnb_sla:93.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:13},
+  ],
+  3:[
+    {name:'Varun Shukla',   quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+    {name:'Pratyush Shahi', quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+    {name:'Arushi Rajput',  quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+  ],
+  4:[
+    {name:'Varun Shukla',   quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+    {name:'Pratyush Shahi', quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+    {name:'Arushi Rajput',  quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
+  ],
+};
+
+// ── Raw data — live from Google Sheets, fallback above ────────
+let RAW={1:[...FALLBACK[1]],2:[...FALLBACK[2]],3:[...FALLBACK[3]],4:[...FALLBACK[4]]};
+
+function refresh(){
+  const n=RAW[1].length||RAW[2].length||0;
+  document.getElementById('tab-badge-overall').textContent=n;
+  document.getElementById('tab-badge-spec').textContent=n;
+  renderOverall();
+  renderWbw();
+  renderSpecialist();
+}
+
+// ── Helpers ──────────────────────────────────
+function sc(a,wk){
+  if(!a) return null;
+  const t=T[wk],m=[];
+  if(a.quality!=null)       m.push(Math.min(a.quality/t.quality,1)*100);
+  if(a.fcs!=null)           m.push(Math.min(a.fcs/t.fcs,1)*100);
+  if(a.airbnb_sla!=null)    m.push(Math.min(a.airbnb_sla/t.airbnb_sla,1)*100);
+  if(a.nps!=null)           m.push(Math.min(Math.max(a.nps,0)/t.nps,1)*100);
+  if(a.spd!=null)           m.push(Math.min(a.spd/t.spd,1)*100);
+  if(t.ttr!=null&&a.ttr!=null) m.push(Math.min(a.ttr/t.ttr,1)*100);
+  if(a.host_appeal!=null)   m.push(Math.min(t.host_appeal/Math.max(a.host_appeal,.01),1)*100);
+  if(a.guest_appeal!=null)  m.push(Math.min(t.guest_appeal/Math.max(a.guest_appeal,.01),1)*100);
+  if(a.three_contact!=null) m.push(Math.min(t.three_contact/Math.max(a.three_contact,.01),1)*100);
+  if(m.length===0) return null;
+  return Math.round(m.reduce((s,v)=>s+v,0)/m.length);
+}
+function cvt(val,tgt,inv=false){
+  if(val==null||tgt==null)return'na';
+  const r=inv?tgt/Math.max(val,.01):val/Math.max(tgt,.01);
+  return r>=1?'good':r>=.85?'warn':'bad';
+}
+function bc(s){return s==null?'na':s>=80?'green':s>=65?'yellow':'red';}
+function clr(c){return c==='good'?'var(--green)':c==='warn'?'var(--yellow)':c==='bad'?'var(--red)':'var(--muted)';}
+function avg(wk,k){const vs=RAW[wk].map(a=>a[k]).filter(v=>v!=null);if(!vs.length)return null;return Math.round(vs.reduce((s,v)=>s+v,0)/vs.length*10)/10;}
+function avgSc(wk){const vs=RAW[wk].map(a=>sc(a,wk)).filter(v=>v!=null);if(!vs.length)return null;return Math.round(vs.reduce((s,v)=>s+v,0)/vs.length);}
+function prog(val,tgt,cls){
+  const pct=Math.min(100,(val/tgt)*100);
+  return`<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${cls}" style="width:${pct}%"></div></div><span class="prog-lbl">${val}%</span></div>`;
+}
+function spark(name){
+  const allScores=[1,2,3,4].map(w=>sc(RAW[w].find(x=>x.name===name),w));
+  const scores=allScores.filter(s=>s!=null);
+  if(scores.length<2) return`<span style="font-size:11px;color:var(--muted)">—</span>`;
+  const validPts=allScores.map((s,i)=>s!=null?{i,s}:null).filter(Boolean);
+  const W=84,H=30,p=4;
+  const mn=Math.min(...scores)-8,mx=Math.max(...scores)+8;
+  const xOf=i=>p+i*(W-2*p)/3;
+  const yOf=s=>H-p-(s-mn)/(mx-mn)*(H-2*p);
+  const pts=validPts.map(({i,s})=>`${xOf(i)},${yOf(s)}`);
+  const trend=scores[scores.length-1]-scores[0];
+  const col=trend>2?'#00843D':trend<-2?'#C13515':'#B76E00';
+  const last=validPts[validPts.length-1];
+  return`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${xOf(last.i)}" cy="${yOf(last.s)}" r="3" fill="${col}"/>
+  </svg>`;
+}
+
+// ── Latest week with data ─────────────────────
+function latestWeek(){
+  for(let w=4;w>=1;w--){
+    if(RAW[w]&&RAW[w].some(a=>a.fcs!=null||a.quality!=null||a.ttr!=null||a.airbnb_sla!=null))return w;
+  }
+  return 1;
+}
+
+// ═══════════════════════════════════
+// SECTION 1: OVERALL
+// ═══════════════════════════════════
+function renderOverall(){
+  const lw=latestWeek();
+  const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
+  const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
+  const avgScore=scores.length?Math.round(scores.reduce((s,v)=>s+v,0)/scores.length):null;
+  const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
+  const avgColor=avgScore==null?'var(--muted)':avgScore>=80?'var(--green)':avgScore>=65?'var(--yellow)':'var(--red)';
+  // Summary cards
+  document.getElementById('overall-cards').innerHTML=`
+    <div class="sc"><div class="sc-icon blue">👥</div><div class="sc-label">Agents in Nesting</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
+    <div class="sc"><div class="sc-icon purple">📊</div><div class="sc-label">Week ${lw} Avg Score</div><div class="sc-value" style="color:${avgColor}">${avgScore!=null?avgScore+'%':'—'}</div><div class="sc-sub">vs week ${lw} targets</div></div>
+    <div class="sc"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">agents ≥80% week ${lw}</div></div>
+    <div class="sc"><div class="sc-icon red">⚠️</div><div class="sc-label">At Risk</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">agents below 65%</div></div>`;
+  // Risk list
+  const risky=data.filter(a=>{const s=sc(a,lw);return s!=null&&s<65;}).sort((a,b)=>sc(a,lw)-sc(b,lw));
+  const t=T[lw];
+  document.getElementById('overall-risk').innerHTML=risky.length===0
+    ?`<div class="empty-ok">✓ No agents at risk in week ${lw}</div>`
+    :risky.map(a=>{
+      const s=sc(a,lw),idx=RAW[lw].findIndex(x=>x.name===a.name);
+      const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
+      const issues=[];
+      if(a.quality!=null&&a.quality<t.quality)issues.push('Quality');
+      if(a.host_appeal!=null&&a.host_appeal>t.host_appeal)issues.push('Host Appeal');
+      if(a.guest_appeal!=null&&a.guest_appeal>t.guest_appeal)issues.push('Guest Appeal');
+      if(a.three_contact!=null&&a.three_contact>t.three_contact)issues.push('3+ Contact');
+      if(a.fcs!=null&&a.fcs<t.fcs)issues.push('1st Cntct SLA');
+      if(a.nps!=null&&a.nps<t.nps)issues.push('NPS');
+      const tag=s<55?'red':'yellow';
+      return`<div class="risk-item">
+        <div style="position:relative">
+          <div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div>
+          <div class="risk-dot ${tag}"></div>
+        </div>
+        <div style="flex:1"><div class="risk-name">${a.name}</div><div class="risk-issue">${issues.slice(0,4).join(' · ')||'Multiple metrics'}</div></div>
+        <span class="risk-tag ${tag}">${s}%</span>
+      </div>`;
+    }).join('');
+  // Metric grid (cohort averages for latest week)
+  const defs=[
+    {k:'quality',lbl:'Quality',inv:false,tgt:`≥${t.quality}%`,ok:v=>v>=t.quality,fmt:v=>v+'%'},
+    {k:'fcs',lbl:'1st Contact SLA',inv:false,tgt:`≥${t.fcs}%`,ok:v=>v>=t.fcs,fmt:v=>v+'%'},
+    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',inv:false,tgt:`≥${t.airbnb_sla}%`,ok:v=>v>=t.airbnb_sla,fmt:v=>v+'%'},
+    {k:'host_appeal',lbl:'Host Appeal',inv:true,tgt:`≤${t.host_appeal}%`,ok:v=>v<=t.host_appeal,fmt:v=>v+'%'},
+    {k:'guest_appeal',lbl:'Guest Appeal',inv:true,tgt:`≤${t.guest_appeal}%`,ok:v=>v<=t.guest_appeal,fmt:v=>v+'%'},
+    {k:'three_contact',lbl:'3+ Contact',inv:true,tgt:`≤${t.three_contact}%`,ok:v=>v<=t.three_contact,fmt:v=>v+'%'},
+    {k:'spd',lbl:'SPD',inv:false,tgt:`≥${t.spd}`,ok:v=>v>=t.spd,fmt:v=>v},
+    {k:'nps',lbl:'Paid Host NPS',inv:false,tgt:`≥${t.nps}`,ok:v=>v>=t.nps,fmt:v=>v},
+    {k:'ttr',lbl:'TTR <14d',inv:false,tgt:t.ttr!=null?`≥${t.ttr}%`:'N/A this week',ok:v=>t.ttr!=null&&v>=t.ttr,fmt:v=>v+'%'},
+  ];
+  document.getElementById('overall-metric-grid').innerHTML=defs.map(d=>{
+    const val=avg(lw,d.k);
+    if(val==null) return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:var(--muted)">N/A</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
+    const ok=d.ok(val);
+    return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:${ok?'var(--green)':'var(--red)'}">${d.fmt(val)}</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
+  }).join('');
+  // Table
+  document.getElementById('overall-tbody').innerHTML=data.map((a,i)=>{
+    const s=sc(a,lw),rank=i+1;
+    const rankHTML=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':`<span class="rank-num">${rank}</span>`;
+    const idx=RAW[lw].findIndex(x=>x.name===a.name);
+    const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const qcls=a.quality!=null?(a.quality>=85?'green':a.quality>=72?'yellow':'red'):'na';
+    return`<tr onclick="openPanel('${a.name}')">
+      <td style="text-align:center;font-size:16px">${rankHTML}</td>
+      <td><div class="agent-cell"><div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div><div><div class="agent-name">${a.name}</div><div class="agent-sub">Week ${lw}</div></div></div></td>
+      <td style="text-align:center"><span class="badge ${bc(s)}">${s!=null?s+'%':'N/A'}</span></td>
+      <td>${a.quality!=null?prog(a.quality,100,qcls):'<span class="mv na">N/A</span>'}</td>
+      <td><span class="mv ${cvt(a.ttr,t.ttr)}">${a.ttr!=null?a.ttr+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.fcs,t.fcs)}">${a.fcs!=null?a.fcs+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.airbnb_sla,t.airbnb_sla)}">${a.airbnb_sla!=null?a.airbnb_sla+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.host_appeal,t.host_appeal,true)}">${a.host_appeal!=null?a.host_appeal+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.guest_appeal,t.guest_appeal,true)}">${a.guest_appeal!=null?a.guest_appeal+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.three_contact,t.three_contact,true)}">${a.three_contact!=null?a.three_contact+'%':'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.spd,t.spd)}">${a.spd!=null?a.spd:'N/A'}</span></td>
+      <td><span class="mv ${cvt(a.nps,t.nps)}">${a.nps!=null?a.nps:'N/A'}</span></td>
+      <td style="font-weight:700;text-align:center">${a.closed!=null?a.closed:'—'}</td>
+      <td style="color:var(--muted);text-align:center">${a.assigned!=null?a.assigned:'—'}</td>
+      <td style="text-align:center">${spark(a.name)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+// SECTION 2: WEEK BY WEEK
+// ═══════════════════════════════════
+let curWbwWk=1;
+function renderWbw(){
+  const weekAvgScores=[1,2,3,4].map(w=>avgSc(w));
+  // Week summary cards
+  document.getElementById('wbw-week-cards').innerHTML=[1,2,3,4].map((w,i)=>{
+    const s=weekAvgScores[i];
+    const prev=i>0?weekAvgScores[i-1]:null;
+    const delta=prev!=null?s-prev:null;
+    const noData=s==null;
+    const dCls=delta==null?'flat':delta>0?'up':'down';
+    const dTxt=delta==null?'&nbsp;':delta>0?`↑ ${delta} pts week on week`:`↓ ${Math.abs(delta)} pts week on week`;
+    const on=noData?'—':RAW[w].filter(a=>{const v=sc(a,w);return v!=null&&v>=80;}).length;
+    const scoreDisplay=noData?'<span style="color:var(--muted);font-size:18px">Pending</span>':`<div class="wsc-score" style="color:${s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)'}">${s}%</div>`;
+    return`<div class="wsc ${w===curWbwWk?'active':''}" onclick="setWbwWeek(null,${w},this)">
+      <div class="wsc-wk">Week ${w}</div>
+      ${scoreDisplay}
+      <div class="wsc-delta ${dCls}">${noData?'No data yet':dTxt}</div>
+      <div class="wsc-agents">${noData?'—':on+' of '+RAW[w].length+' on track'}</div>
+    </div>`;
+  }).join('');
+  // Cohort trend chart
+  drawCohortTrend(weekAvgScores);
+  // Week cohort grid
+  renderWbwGrid();
+  // Comparison table
+  renderWbwCompare();
+}
+function setWbwWeek(btn,wk){
+  curWbwWk=wk;
+  if(btn){document.querySelectorAll('.week-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  document.querySelectorAll('.wsc').forEach((c,i)=>c.classList.toggle('active',i+1===wk));
+  document.getElementById('wbw-wk-label').textContent=wk;
+  renderWbwGrid();
+}
+function renderWbwGrid(){
+  const t=T[curWbwWk];
+  const defs=[
+    {k:'quality',lbl:'Quality',inv:false,fmt:v=>v+'%',ok:v=>v>=t.quality,tgt:`≥${t.quality}%`},
+    {k:'fcs',lbl:'1st Contact SLA',inv:false,fmt:v=>v+'%',ok:v=>v>=t.fcs,tgt:`≥${t.fcs}%`},
+    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',inv:false,fmt:v=>v+'%',ok:v=>v>=t.airbnb_sla,tgt:`≥${t.airbnb_sla}%`},
+    {k:'host_appeal',lbl:'Host Appeal',inv:true,fmt:v=>v+'%',ok:v=>v<=t.host_appeal,tgt:`≤${t.host_appeal}%`},
+    {k:'guest_appeal',lbl:'Guest Appeal',inv:true,fmt:v=>v+'%',ok:v=>v<=t.guest_appeal,tgt:`≤${t.guest_appeal}%`},
+    {k:'three_contact',lbl:'3+ Contact',inv:true,fmt:v=>v+'%',ok:v=>v<=t.three_contact,tgt:`≤${t.three_contact}%`},
+    {k:'spd',lbl:'SPD',inv:false,fmt:v=>v,ok:v=>v>=t.spd,tgt:`≥${t.spd}`},
+    {k:'nps',lbl:'Paid Host NPS',inv:false,fmt:v=>v,ok:v=>v>=t.nps,tgt:`≥${t.nps}`},
+    ...(t.ttr!=null?[{k:'ttr',lbl:'TTR <14d',inv:false,fmt:v=>v+'%',ok:v=>v>=t.ttr,tgt:`≥${t.ttr}%`}]:[]),
+  ];
+  document.getElementById('wbw-cohort-grid').innerHTML=defs.map(d=>{
+    const val=avg(curWbwWk,d.k);
+    if(val==null) return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:var(--muted)">N/A</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
+    const ok=d.ok(val);
+    return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:${ok?'var(--green)':'var(--red)'}">${d.fmt(val)}</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
+  }).join('');
+}
+function renderWbwCompare(){
+  const MDEFS=[
+    {k:'quality',lbl:'Quality',dir:'higher',inv:false,fmt:v=>v+'%'},
+    {k:'ttr',lbl:'TTR <14d',dir:'higher',inv:false,fmt:v=>v+'%'},
+    {k:'fcs',lbl:'1st Contact SLA',dir:'higher',inv:false,fmt:v=>v+'%'},
+    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',dir:'higher',inv:false,fmt:v=>v+'%'},
+    {k:'host_appeal',lbl:'Host Appeal',dir:'lower',inv:true,fmt:v=>v+'%'},
+    {k:'guest_appeal',lbl:'Guest Appeal',dir:'lower',inv:true,fmt:v=>v+'%'},
+    {k:'three_contact',lbl:'3+ Contact',dir:'lower',inv:true,fmt:v=>v+'%'},
+    {k:'spd',lbl:'SPD',dir:'higher',inv:false,fmt:v=>v},
+    {k:'nps',lbl:'Paid Host NPS',dir:'higher',inv:false,fmt:v=>v},
+  ];
+  document.getElementById('wbw-compare-body').innerHTML=MDEFS.map(m=>{
+    const cells=[1,2,3,4].map(w=>{
+      const t=T[w];const tgt=t[m.k];const val=avg(w,m.k);
+      if(val==null||tgt==null){return`<td class="wk-cell"><span class="wk-na">N/A</span></td>`;}
+      const cls=cvt(val,tgt,m.inv);
+      const tgtTxt=m.inv?`Target ≤${tgt}`:m.k==='spd'||m.k==='nps'?`Target ≥${tgt}`:`Target ≥${tgt}%`;
+      return`<td class="wk-cell">
+        <div class="wk-val">
+          <span class="wk-num ${cls}">${m.fmt(val)}</span>
+          <span class="wk-tgt">${tgtTxt}</span>
+        </div>
+      </td>`;
+    });
+    return`<tr><td><div class="metric-name-cell">${m.lbl}<span class="metric-dir">(${m.dir} is better)</span></div></td>${cells.join('')}</tr>`;
+  }).join('');
+}
+function drawCohortTrend(allScores){
+  const svg=document.getElementById('cohort-trend-svg');
+  const W=460,H=160,pL=40,pR=16,pT=24,pB=40;
+  const validPairs=allScores.map((s,i)=>s!=null?{i,s}:null).filter(Boolean);
+  if(validPairs.length<1){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#B0B0B0" font-size="13" font-family="Inter,sans-serif">No data yet</text>`;return;}
+  const validScores=validPairs.map(p=>p.s);
+  const mn=Math.max(0,Math.min(...validScores)-15),mx=Math.min(100,Math.max(...validScores)+15);
+  const px=i=>pL+i*(W-pL-pR)/3;
+  const py=s=>pT+(1-(s-mn)/(mx-mn))*(H-pT-pB);
+  let out='';
+  [50,75,100].forEach(v=>{if(v<mn||v>mx)return;const y=py(v);out+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#E8E8E8" stroke-width="1" stroke-dasharray="4 4"/><text x="${pL-6}" y="${y+4}" font-size="10" fill="#B0B0B0" text-anchor="end" font-family="Inter,sans-serif">${v}</text>`;});
+  const pts=validPairs.map(({i,s})=>`${px(i)},${py(s)}`);
+  const trend=validScores[validScores.length-1]-validScores[0];
+  const col=trend>2?'#00843D':trend<-2?'#C13515':'#B76E00';
+  const light=trend>2?'rgba(0,132,61,.1)':trend<-2?'rgba(193,53,21,.1)':'rgba(183,110,0,.1)';
+  if(validPairs.length>1){
+    out+=`<path d="M${px(validPairs[0].i)},${py(mn)} L${pts.join(' L')} L${px(validPairs[validPairs.length-1].i)},${py(mn)} Z" fill="${light}"/>`;
+    out+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  allScores.forEach((s,i)=>{
+    if(s!=null){
+      out+=`<circle cx="${px(i)}" cy="${py(s)}" r="5" fill="${col}" stroke="white" stroke-width="2"/>`;
+      out+=`<text x="${px(i)}" y="${py(s)-10}" font-size="11" font-weight="700" fill="${col}" text-anchor="middle" font-family="Inter,sans-serif">${s}%</text>`;
+    }
+    out+=`<text x="${px(i)}" y="${H-10}" font-size="11" fill="${s!=null?'#B0B0B0':'#D0D0D0'}" text-anchor="middle" font-family="Inter,sans-serif">Week ${i+1}${s==null?' (pending)':''}</text>`;
+  });
+  svg.innerHTML=out;
+}
+
+// ═══════════════════════════════════
+// SECTION 3: SPECIALIST
+// ═══════════════════════════════════
+function renderSpecialist(){
+  const lw=latestWeek();
+  const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
+  const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
+  const avgScore=scores.length?Math.round(scores.reduce((s,v)=>s+v,0)/scores.length):null;
+  const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
+  const avgColor=avgScore==null?'var(--muted)':avgScore>=80?'var(--green)':avgScore>=65?'var(--yellow)':'var(--red)';
+  document.getElementById('spec-cards').innerHTML=`
+    <div class="sc"><div class="sc-icon blue">👥</div><div class="sc-label">Total Specialists</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
+    <div class="sc"><div class="sc-icon purple">📊</div><div class="sc-label">Week ${lw} Avg Score</div><div class="sc-value" style="color:${avgColor}">${avgScore!=null?avgScore+'%':'—'}</div><div class="sc-sub">vs week ${lw} targets</div></div>
+    <div class="sc"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">≥80% week ${lw}</div></div>
+    <div class="sc"><div class="sc-icon red">⚠️</div><div class="sc-label">Needs Coaching</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">below 65%</div></div>`;
+  document.getElementById('spec-grid').innerHTML=data.map((a,rank)=>{
+    const s=sc(a,lw);
+    const idx=RAW[lw].findIndex(x=>x.name===a.name);
+    const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const wkScores=[1,2,3,4].map(w=>sc(RAW[w]&&RAW[w][idx],w));
+    const validWkScores=wkScores.filter(v=>v!=null);
+    const trendDelta=validWkScores.length>=2?validWkScores[validWkScores.length-1]-validWkScores[0]:null;
+    const trendTxt=trendDelta==null?'':trendDelta>0?`↑ ${trendDelta}pts`:`↓ ${Math.abs(trendDelta)}pts`;
+    const trendCol=trendDelta==null?'var(--muted)':trendDelta>0?'var(--green)':trendDelta<0?'var(--red)':'var(--muted)';
+    const t=T[lw];
+    const fmtM=(val,suffix='%')=>val!=null?val+suffix:'N/A';
+    const keyMetrics=[
+      {lbl:'Quality',val:fmtM(a.quality),cls:cvt(a.quality,t.quality)},
+      {lbl:'Host Appeal',val:fmtM(a.host_appeal),cls:cvt(a.host_appeal,t.host_appeal,true)},
+      {lbl:'SPD',val:fmtM(a.spd,''),cls:cvt(a.spd,t.spd)},
+      {lbl:'Paid NPS',val:fmtM(a.nps,''),cls:cvt(a.nps,t.nps)},
+    ];
+    const dots=wkScores.map(ws=>`<div class="spec-wk-dot ${bc(ws)}"></div>`).join('');
+    const rankLabel=rank===0?'🥇 Top performer':rank===1?'🥈 2nd':rank===2?'🥉 3rd':`Rank #${rank+1}`;
+    const atRisk=s!=null&&s<65;
+    const sColor=s==null?'var(--muted)':s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)';
+    return`<div class="spec-card" onclick="openPanel('${a.name}')">
+      <div class="spec-header">
+        <div class="spec-avatar" style="background:${AV[idx%AV.length]}">${init}</div>
+        <div style="flex:1">
+          <div class="spec-name">${a.name}</div>
+          <div class="spec-rank">${rankLabel}${atRisk?' · <span style="color:var(--red);font-weight:700">⚠ At Risk</span>':''}</div>
+        </div>
+      </div>
+      <div class="spec-score-row">
+        <span class="spec-score-lbl">Week ${lw} Score</span>
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="spec-score-val" style="color:${sColor}">${s!=null?s+'%':'—'}</span>
+          <span class="spec-score-trend" style="color:${trendCol}">${trendTxt}</span>
+        </div>
+      </div>
+      <div class="spec-metrics">${keyMetrics.map(m=>`<div class="spm"><div class="spm-lbl">${m.lbl}</div><div class="spm-val ${m.cls}">${m.val}</div></div>`).join('')}</div>
+      <div style="margin-bottom:6px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Week Progression</div><div class="spec-wk-row">${dots}</div></div>
+      <div class="spec-footer">
+        <span class="spec-footer-txt">${a.closed!=null?a.closed:0} claims closed · ${a.assigned!=null?a.assigned:0} assigned</span>
+        <button class="spec-footer-btn">View detail →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+// SECTION NAV
+// ═══════════════════════════════════
+function showSection(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sec-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('week-nav').style.display=id==='wbw'?'flex':'none';
+}
+
+// ═══════════════════════════════════
+// DRILL-DOWN PANEL
+// ═══════════════════════════════════
+const MDEFS=[
+  {k:'quality',lbl:'Quality',inv:false,fmt:v=>v+'%',tgtFn:w=>`≥${T[w].quality}%`},
+  {k:'ttr',lbl:'TTR <14d',inv:false,fmt:v=>v+'%',tgtFn:w=>T[w].ttr==null?'N/A':`≥${T[w].ttr}%`},
+  {k:'fcs',lbl:'1st Contact SLA',inv:false,fmt:v=>v+'%',tgtFn:w=>`≥${T[w].fcs}%`},
+  {k:'airbnb_sla',lbl:'Airbnb Resp SLA',inv:false,fmt:v=>v+'%',tgtFn:w=>`≥${T[w].airbnb_sla}%`},
+  {k:'host_appeal',lbl:'Host Appeal',inv:true,fmt:v=>v+'%',tgtFn:w=>`≤${T[w].host_appeal}%`},
+  {k:'guest_appeal',lbl:'Guest Appeal',inv:true,fmt:v=>v+'%',tgtFn:w=>`≤${T[w].guest_appeal}%`},
+  {k:'three_contact',lbl:'3+ Contact',inv:true,fmt:v=>v+'%',tgtFn:w=>`≤${T[w].three_contact}%`},
+  {k:'spd',lbl:'SPD',inv:false,fmt:v=>v,tgtFn:w=>`≥${T[w].spd}`},
+  {k:'nps',lbl:'Paid Host NPS',inv:false,fmt:v=>v,tgtFn:w=>`≥${T[w].nps}`},
+  {k:'closed',lbl:'Claims Closed',inv:false,fmt:v=>v,tgtFn:()=>'—'},
+  {k:'assigned',lbl:'Claims Assigned',inv:false,fmt:v=>v,tgtFn:()=>'—'},
+];
+function openPanel(name){
+  const idx=RAW[1].findIndex(a=>a.name===name);
+  const color=AV[idx%AV.length];
+  const init=name.split(' ').map(n=>n[0]).join('').slice(0,2);
+  document.getElementById('panel-av').style.background=color;
+  document.getElementById('panel-av').textContent=init;
+  document.getElementById('panel-name').textContent=name;
+  document.getElementById('panel-sub').textContent='June 2026 cohort · Nesting Agent';
+  const wkScores=[1,2,3,4].map(w=>sc(RAW[w]&&RAW[w][idx],w));
+  document.getElementById('panel-wsr').innerHTML=
+    wkScores.map((s,i)=>{
+      const prev=i>0?wkScores[i-1]:null;
+      const delta=(prev!=null&&s!=null)?s-prev:null;
+      const dCls=delta==null?'flat':delta>0?'up':'down';
+      const dTxt=delta==null?'—':delta>0?`↑ ${delta}`:`↓ ${Math.abs(delta)}`;
+      const sCol=s==null?'var(--muted)':s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)';
+      return`<div class="wsr"><div class="wsr-lbl">Week ${i+1}</div><div class="wsr-sc" style="color:${sCol}">${s!=null?s+'%':'—'}</div><div class="wsr-d ${dCls}">${dTxt}</div></div>`;
+    }).join('');
+  drawPanelChart(wkScores);
+  document.getElementById('panel-mb').innerHTML=MDEFS.map(m=>{
+    const cells=[1,2,3,4].map(w=>{
+      if(!RAW[w]||!RAW[w][idx])return`<div class="mb-cell center"><span class="mb-val na">N/A</span></div>`;
+      const a=RAW[w][idx],val=a[m.k],t=T[w][m.k];
+      if(val==null)return`<div class="mb-cell center"><span class="mb-val na">N/A</span></div>`;
+      const cls=t==null?'':cvt(val,t,m.inv);
+      return`<div class="mb-cell center"><span class="mb-val ${cls}">${m.fmt(val)}</span></div>`;
+    });
+    return`<div class="mb-row"><div class="mb-cell"><span class="mb-metric">${m.lbl}</span></div>${cells.join('')}</div>`;
+  }).join('');
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePanel(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  document.body.style.overflow='';
+}
+function drawPanelChart(allScores){
+  const svg=document.getElementById('panel-svg');
+  const W=620,H=150,pL=40,pR=20,pT=24,pB=36;
+  const validPairs=allScores.map((s,i)=>s!=null?{i,s}:null).filter(Boolean);
+  if(!validPairs.length){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#B0B0B0" font-size="13" font-family="Inter,sans-serif">No data yet</text>`;return;}
+  const vs=validPairs.map(p=>p.s);
+  const mn=Math.max(0,Math.min(...vs)-12),mx=Math.min(100,Math.max(...vs)+12);
+  const px=i=>pL+i*(W-pL-pR)/3;
+  const py=s=>pT+(1-(s-mn)/(mx-mn))*(H-pT-pB);
+  const trend=vs[vs.length-1]-vs[0];
+  const col=trend>2?'#00843D':trend<-2?'#C13515':'#B76E00';
+  const light=trend>2?'rgba(0,132,61,.1)':trend<-2?'rgba(193,53,21,.1)':'rgba(183,110,0,.1)';
+  let out='';
+  [25,50,75,100].forEach(v=>{if(v<mn-5||v>mx+5)return;const y=py(v);out+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#E8E8E8" stroke-width="1" stroke-dasharray="4 4"/><text x="${pL-6}" y="${y+4}" font-size="10" fill="#B0B0B0" text-anchor="end" font-family="Inter,sans-serif">${v}</text>`;});
+  if(validPairs.length>1){
+    const pts=validPairs.map(({i,s})=>`${px(i)},${py(s)}`);
+    out+=`<path d="M${px(validPairs[0].i)},${py(mn)} L${pts.join(' L')} L${px(validPairs[validPairs.length-1].i)},${py(mn)} Z" fill="${light}"/>`;
+    out+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  allScores.forEach((s,i)=>{
+    if(s!=null){
+      out+=`<circle cx="${px(i)}" cy="${py(s)}" r="5" fill="${col}" stroke="white" stroke-width="2"/>`;
+      out+=`<text x="${px(i)}" y="${py(s)-10}" font-size="11" font-weight="700" fill="${col}" text-anchor="middle" font-family="Inter,sans-serif">${s}%</text>`;
+    }
+    out+=`<text x="${px(i)}" y="${H-8}" font-size="11" fill="${s!=null?'#B0B0B0':'#D0D0D0'}" text-anchor="middle" font-family="Inter,sans-serif">Week ${i+1}</text>`;
+  });
+  svg.innerHTML=out;
+}
+
+// ── Init ─────────────────────────────────────
+refresh();
+</script>
+</body>
+</html>
