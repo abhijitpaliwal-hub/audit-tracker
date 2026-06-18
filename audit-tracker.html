@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aircover Audit Tracker — Nesting</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#FF385C;
+  --bg:#0F1117; --surface:#181C26; --card:#1E2130; --card2:#252A3A;
+  --border:#2A2F42; --border2:#333849;
+  --text:#F0F2F8; --sub:#A0A8C0; --muted:#606880;
+  --green:#00D4AA; --green-dim:rgba(0,212,170,.15);
+  --yellow:#FFB800; --yellow-dim:rgba(255,184,0,.15);
+  --red:#FF4D6A; --red-dim:rgba(255,77,106,.15);
+  --teal:#00C2D4; --orange:#FF7043; --purple:#9B6BFF;
+  --sh-sm:0 2px 8px rgba(0,0,0,.4); --sh-md:0 6px 24px rgba(0,0,0,.5);
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,#C0144A 0%,#E31C5F 50%,#FF385C 100%);padding:0 32px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 4px 20px rgba(255,56,92,.35);}
+.hdr-left{display:flex;align-items:center;gap:14px;}
+.logo{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:16px;}
+.hdr-title{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.3px;}
+.hdr-sep{width:1px;height:16px;background:rgba(255,255,255,.3);}
+.hdr-sub{font-size:12px;color:rgba(255,255,255,.75);font-weight:500;}
+.hdr-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;color:#fff;}
+
+/* TABS */
+.sec-tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;display:flex;gap:0;position:sticky;top:58px;z-index:200;}
+.sec-tab{padding:14px 20px;font-size:13px;font-weight:600;color:var(--sub);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.sec-tab:hover{color:var(--text);}
+.sec-tab.active{color:var(--text);border-bottom-color:var(--brand);}
+
+/* MAIN */
+.main{padding:24px 32px;max-width:1400px;margin:0 auto;}
+.section{display:none;}
+.section.active{display:block;}
+
+/* CARDS ROW */
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 20px;box-shadow:var(--sh-sm);position:relative;overflow:hidden;}
+.sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sc.c0::before{background:linear-gradient(90deg,var(--teal),var(--green));}
+.sc.c1::before{background:linear-gradient(90deg,var(--brand),var(--orange));}
+.sc.c2::before{background:linear-gradient(90deg,var(--green),#00A699);}
+.sc.c3::before{background:linear-gradient(90deg,var(--red),var(--orange));}
+.sc-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;}
+.sc-value{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1;margin-bottom:4px;}
+.sc-sub{font-size:11px;color:var(--sub);}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-sm);}
+.card-pad{padding:20px 22px;}
+.sechdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sechdr h2{font-size:14px;font-weight:700;}
+.sechdr .hint{font-size:11px;color:var(--muted);}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.form-group input,.form-group select,.form-group textarea{background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--brand);}
+.form-group select option{background:var(--card2);}
+.form-group textarea{resize:vertical;min-height:72px;}
+
+/* CRITERIA TABLE */
+.criteria-table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+.criteria-table thead th{padding:9px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--card2);border-bottom:1px solid var(--border);text-align:left;}
+.criteria-table thead th.center{text-align:center;}
+.criteria-table tbody tr{border-bottom:1px solid var(--border);}
+.criteria-table tbody tr:last-child{border-bottom:none;}
+.criteria-table tbody td{padding:10px 14px;vertical-align:middle;}
+.crit-name{font-weight:600;font-size:13px;}
+.crit-desc{font-size:11px;color:var(--sub);margin-top:2px;}
+.crit-critical{display:inline-block;font-size:10px;font-weight:700;color:var(--red);background:var(--red-dim);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+.radio-group{display:flex;gap:6px;justify-content:center;}
+.radio-group label{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;color:var(--sub);transition:all .15s;white-space:nowrap;}
+.radio-group label:hover{border-color:var(--border2);}
+.radio-group input[type=radio]{display:none;}
+.radio-group input[type=radio]:checked + span{font-weight:700;}
+.radio-group label.yes{} .radio-group label.partial{} .radio-group label.no{} .radio-group label.na{}
+.radio-group label:has(input:checked).yes{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.radio-group label:has(input:checked).partial{background:var(--yellow-dim);border-color:var(--yellow);color:var(--yellow);}
+.radio-group label:has(input:checked).no{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.radio-group label:has(input:checked).na{background:rgba(255,255,255,.06);border-color:var(--border2);color:var(--sub);}
+
+/* SCORE BAR */
+.score-preview{background:var(--card2);border:1px solid var(--border);border-radius:var(--r-md);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;}
+.score-big{font-size:36px;font-weight:800;letter-spacing:-.5px;min-width:72px;}
+.score-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.score-bar-wrap{flex:1;}
+.score-bar{height:8px;background:var(--border2);border-radius:4px;overflow:hidden;margin-bottom:4px;}
+.score-bar-fill{height:100%;border-radius:4px;transition:width .3s;}
+.score-verdict{font-size:12px;font-weight:700;}
+
+/* BTN */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:#e0103a;}
+.btn-ghost{background:var(--card2);color:var(--sub);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,.3);}
+.btn-danger:hover{background:rgba(255,77,106,.25);}
+
+/* AUDIT LOG TABLE */
+.log-table{width:100%;border-collapse:collapse;font-size:13px;}
+.log-table thead th{padding:9px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--card2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:left;}
+.log-table tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.log-table tbody tr:last-child{border-bottom:none;}
+.log-table tbody tr:hover{background:rgba(255,255,255,.03);}
+.log-table tbody td{padding:10px 14px;vertical-align:middle;}
+.score-badge{display:inline-flex;align-items:center;justify-content:center;min-width:52px;padding:4px 10px;border-radius:20px;font-weight:700;font-size:13px;}
+.score-badge.pass{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,212,170,.3);}
+.score-badge.partial-pass{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(255,184,0,.3);}
+.score-badge.fail{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,.3);}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#fff;flex-shrink:0;}
+.agent-cell{display:flex;align-items:center;gap:8px;}
+.wk-chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:rgba(155,107,255,.15);color:var(--purple);border:1px solid rgba(155,107,255,.3);}
+
+/* SUMMARY GRID */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.agent-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:18px;box-shadow:var(--sh-sm);cursor:pointer;transition:all .2s;}
+.agent-card:hover{border-color:var(--border2);box-shadow:var(--sh-md);transform:translateY(-2px);}
+.agent-card.selected{border-color:var(--brand);}
+.ac-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.ac-name{font-weight:700;font-size:14px;}
+.ac-sub{font-size:11px;color:var(--sub);margin-top:1px;}
+.ac-score{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;}
+.ac-wks{display:flex;gap:6px;margin-top:10px;}
+.ac-wk{flex:1;background:var(--card2);border-radius:6px;padding:7px 8px;text-align:center;}
+.ac-wk-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.ac-wk-val{font-size:13px;font-weight:700;}
+
+/* CRITERIA BREAKDOWN */
+.criteria-breakdown{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.cb-item{background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;}
+.cb-name{font-size:12px;font-weight:600;color:var(--text);}
+.cb-score{font-size:12px;font-weight:700;}
+
+/* FILTERS */
+.filters{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
+.filter-select{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;font-family:inherit;color:var(--sub);outline:none;cursor:pointer;}
+.filter-select:focus{border-color:var(--brand);}
+.filter-select option{background:var(--card2);}
+.filter-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+
+/* EMPTY */
+.empty{padding:40px 0;text-align:center;color:var(--muted);font-size:13px;}
+.empty-icon{font-size:32px;margin-bottom:10px;}
+
+/* OVERLAY / DETAIL PANEL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.panel{position:fixed;top:0;right:0;width:680px;max-width:100vw;height:100vh;background:var(--surface);z-index:500;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:var(--sh-md);border-left:1px solid var(--border);}
+.panel.open{transform:translateX(0);}
+.panel-hdr{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--surface);z-index:10;}
+.panel-close{margin-left:auto;background:var(--card);border:1px solid var(--border);cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--sub);}
+.panel-close:hover{background:var(--card2);color:var(--text);}
+.panel-body{padding:18px 24px;}
+.detail-row{display:grid;grid-template-columns:140px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.detail-row:last-child{border-bottom:none;}
+.detail-key{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:2px;}
+.detail-val{font-size:13px;color:var(--text);}
+.crit-result{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.crit-result:last-child{border-bottom:none;}
+.crit-result-name{flex:1;font-size:12px;font-weight:600;}
+.crit-pip{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+.crit-pip.yes{background:var(--green-dim);color:var(--green);}
+.crit-pip.partial{background:var(--yellow-dim);color:var(--yellow);}
+.crit-pip.no{background:var(--red-dim);color:var(--red);}
+.crit-pip.na{background:rgba(255,255,255,.06);color:var(--sub);}
+
+/* WEEK TABS */
+.week-tabs-row{display:flex;gap:6px;margin-bottom:18px;}
+.wtab{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--sub);transition:all .15s;}
+.wtab.active{background:var(--brand);border-color:var(--brand);color:#fff;}
+.wtab:hover:not(.active){border-color:var(--border2);color:var(--text);}
+
+.divider{height:1px;background:var(--border);margin:20px 0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.tag{display:inline-block;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;}
+.tag.host{background:rgba(0,194,212,.15);color:var(--teal);}
+.tag.guest{background:rgba(155,107,255,.15);color:var(--purple);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="logo">🛡️</div>
+    <span class="hdr-title">Aircover Audit Tracker</span>
+    <div class="hdr-sep"></div>
+    <span class="hdr-sub">Nesting — June 2026</span>
+  </div>
+  <div class="hdr-pill" id="hdr-count">0 audits logged</div>
+</div>
+
+<!-- TABS -->
+<div class="sec-tabs">
+  <button class="sec-tab active" onclick="showSection('overview',this)">📊 Overview</button>
+  <button class="sec-tab" onclick="showSection('log',this)">➕ Log Audit</button>
+  <button class="sec-tab" onclick="showSection('history',this)">📋 Audit History</button>
+  <button class="sec-tab" onclick="showSection('summary',this)">👤 Agent Summary</button>
+</div>
+
+<div class="main">
+
+<!-- ═══ OVERVIEW ═══ -->
+<section class="section active" id="sec-overview">
+  <div class="cards-row" id="ov-cards"></div>
+  <div class="two-col">
+    <div class="card card-pad">
+      <div class="sechdr"><h2>Audits per Agent</h2></div>
+      <div id="ov-agent-bars"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="sechdr"><h2>Pass Rate by Week</h2></div>
+      <div id="ov-week-bars"></div>
+    </div>
+  </div>
+  <div class="card card-pad">
+    <div class="sechdr"><h2>Criteria Performance — Cohort Average</h2><span class="hint">% of Yes across all audits</span></div>
+    <div id="ov-criteria-bars"></div>
+  </div>
+</section>
+
+<!-- ═══ LOG AUDIT ═══ -->
+<section class="section" id="sec-log">
+  <div class="card card-pad">
+    <div class="sechdr" style="margin-bottom:20px">
+      <h2 id="form-title">New Audit Entry</h2>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="hint" id="form-hint">Saved in this browser — persists across sessions</span>
+        <span id="edit-badge" style="display:none;background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(255,184,0,.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">✏ Editing existing audit</span>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Agent</label>
+        <select id="f-agent">
+          <option value="">Select agent…</option>
+          <option>Varun Shukla</option>
+          <option>Arushi Rajput</option>
+          <option>Pratyush Shahi</option>
+          <option>Shubham Arora</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Nesting Week</label>
+        <select id="f-week">
+          <option value="">Select week…</option>
+          <option value="1">Week 1 — Jun 2–8</option>
+          <option value="2">Week 2 — Jun 9–15</option>
+          <option value="3">Week 3 — Jun 16–22</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Case ID</label>
+        <input type="text" id="f-caseid" placeholder="e.g. CS-12345678">
+      </div>
+      <div class="form-group">
+        <label>Audit Date</label>
+        <input type="date" id="f-date">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ── CASE SUMMARY ── -->
+    <div class="sechdr" style="margin-bottom:16px">
+      <h2>📝 Case Summary</h2>
+      <span class="hint">Brief notes on what happened in each phase</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+      <div class="form-group">
+        <label>Investigation</label>
+        <textarea id="cs-investigation" placeholder="What did the agent investigate? Evidence reviewed, questions asked, information gathered…" style="min-height:90px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Evaluation</label>
+        <textarea id="cs-evaluation" placeholder="How did the agent evaluate the case? Policy applied, decision rationale, coverage assessment…" style="min-height:90px"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Resolution</label>
+        <textarea id="cs-resolution" placeholder="What was the resolution? Outcome, amount, communication to customer, closure steps…" style="min-height:90px"></textarea>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sechdr" style="margin-bottom:14px"><h2>Audit Criteria</h2><span class="hint">Score each area and add notes</span></div>
+
+    <table class="criteria-table" id="criteria-form">
+      <thead>
+        <tr>
+          <th style="width:22%">Criteria</th>
+          <th class="center" style="width:10%">Yes <span style="color:var(--green);font-size:10px">(1pt)</span></th>
+          <th class="center" style="width:10%">Partial <span style="color:var(--yellow);font-size:10px">(0.5pt)</span></th>
+          <th class="center" style="width:10%">No <span style="color:var(--red);font-size:10px">(0pt)</span></th>
+          <th class="center" style="width:10%">N/A</th>
+          <th style="width:38%">Notes</th>
+        </tr>
+      </thead>
+      <tbody id="criteria-body"></tbody>
+    </table>
+
+    <div class="score-preview" id="score-preview">
+      <div>
+        <div class="score-label">Audit Score</div>
+        <div class="score-big" id="score-display" style="color:var(--muted)">—</div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar"><div class="score-bar-fill" id="score-bar-fill" style="width:0%;background:var(--green)"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px">
+          <span>0%</span><span>50%</span><span>100%</span>
+        </div>
+      </div>
+      <div>
+        <div class="score-verdict" id="score-verdict" style="color:var(--muted)">No score yet</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px" id="score-breakdown"></div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:16px">
+      <label>Coaching Notes / Observations</label>
+      <textarea id="f-notes" placeholder="Describe areas of improvement, positive highlights, or specific case observations…"></textarea>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>Follow-up Required?</label>
+      <select id="f-followup">
+        <option value="no">No follow-up needed</option>
+        <option value="coaching">Coaching session needed</option>
+        <option value="reaudit">Re-audit required</option>
+        <option value="escalate">Escalate to supervisor</option>
+      </select>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="submitAudit()">💾 Save Audit</button>
+      <button class="btn btn-ghost" onclick="resetForm()">↺ Reset</button>
+    </div>
+    <div id="form-msg" style="margin-top:12px;font-size:13px;font-weight:600;display:none"></div>
+  </div>
+</section>
+
+<!-- ═══ HISTORY ═══ -->
+<section class="section" id="sec-history">
+  <div class="filters">
+    <span class="filter-label">Filter:</span>
+    <select class="filter-select" id="hist-agent" onchange="renderHistory()">
+      <option value="">All Agents</option>
+      <option>Varun Shukla</option><option>Arushi Rajput</option>
+      <option>Pratyush Shahi</option><option>Shubham Arora</option>
+    </select>
+    <select class="filter-select" id="hist-week" onchange="renderHistory()">
+      <option value="">All Weeks</option>
+      <option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option>
+    </select>
+    <select class="filter-select" id="hist-result" onchange="renderHistory()">
+      <option value="">All Results</option>
+      <option value="pass">Pass (≥80%)</option>
+      <option value="partial-pass">Partial Pass (60–79%)</option>
+      <option value="fail">Fail (&lt;60%)</option>
+    </select>
+    <button class="btn btn-ghost" style="margin-left:auto;padding:6px 14px;font-size:12px" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table class="log-table">
+        <thead><tr>
+          <th>Agent</th><th>Week</th><th>Case ID</th><th>Date</th>
+          <th>Score</th><th>Result</th><th>Follow-up</th><th></th>
+        </tr></thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </div>
+    <div id="history-empty" class="empty" style="display:none">
+      <div class="empty-icon">📋</div>No audits yet. Go to <strong>Log Audit</strong> to add your first entry.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ AGENT SUMMARY ═══ -->
+<section class="section" id="sec-summary">
+  <div class="summary-grid" id="agent-cards"></div>
+
+  <div id="agent-detail" style="display:none">
+    <div class="sechdr">
+      <h2 id="detail-agent-name">Agent Detail</h2>
+      <div class="week-tabs-row" id="detail-week-tabs"></div>
+    </div>
+    <div class="two-col">
+      <div class="card card-pad">
+        <div class="sechdr" style="margin-bottom:12px"><h2>Score Trend</h2></div>
+        <svg id="detail-svg" width="100%" height="130" viewBox="0 0 420 130" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="card card-pad">
+        <div class="sechdr" style="margin-bottom:12px"><h2>Criteria Breakdown</h2></div>
+        <div class="criteria-breakdown" id="detail-criteria"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table class="log-table">
+          <thead><tr>
+            <th>Week</th><th>Case ID</th><th>Date</th><th>Score</th><th>Result</th><th>Follow-up</th><th></th>
+          </tr></thead>
+          <tbody id="detail-history-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /main -->
+
+<!-- DETAIL PANEL -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <div class="panel-hdr">
+    <div class="avatar" id="panel-av" style="width:36px;height:36px;font-size:13px"></div>
+    <div><div style="font-size:15px;font-weight:700" id="panel-title"></div><div style="font-size:11px;color:var(--sub);margin-top:2px" id="panel-sub"></div></div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────
+const AGENTS=['Varun Shukla','Arushi Rajput','Pratyush Shahi','Shubham Arora'];
+const AV_COLORS=['#E31C5F','#00A699','#FC642D','#9B6BFF'];
+const WEEKS={1:'Week 1 · Jun 2–8',2:'Week 2 · Jun 9–15',3:'Week 3 · Jun 16–22'};
+
+const CRITERIA=[
+  {id:'empathy',      name:'Empathy & Tone',           desc:'Demonstrated genuine understanding and appropriate tone throughout'},
+  {id:'sla',          name:'Timeline & SLA Adherence', desc:'Responded and resolved within required SLA windows'},
+  {id:'casenotes',    name:'Case Notes',               desc:'Internal notes are accurate, complete, and clearly structured'},
+  {id:'investigation',name:'Investigation',            desc:'Gathered all required evidence, photos, receipts, and case context'},
+  {id:'evaluation',   name:'Evaluation',               desc:'Correctly assessed the claim against policy; sound decision rationale'},
+  {id:'resolution',   name:'Resolution',               desc:'Correct and fair resolution delivered; customer clearly informed'},
+];
+
+const RESULT_LABELS={pass:'Pass',part:'Partial Pass',fail:'Fail'};
+const FOLLOWUP_LABELS={no:'None',coaching:'Coaching',reaudit:'Re-audit',escalate:'Escalate'};
+
+// ── Storage ────────────────────────────────────────
+function load(){return JSON.parse(localStorage.getItem('aircover-audits')||'[]');}
+function save(data){localStorage.setItem('aircover-audits',JSON.stringify(data));}
+
+let editingId=null;
+
+// ── Init ───────────────────────────────────────────
+function buildCriteriaForm(){
+  document.getElementById('criteria-body').innerHTML=CRITERIA.map(c=>`
+    <tr>
+      <td style="vertical-align:top;padding-top:14px">
+        <div class="crit-name">${c.name}</div>
+        <div class="crit-desc">${c.desc}</div>
+      </td>
+      ${['yes','partial','no','na'].map(v=>`
+      <td style="text-align:center;vertical-align:top;padding-top:14px">
+        <div class="radio-group"><label class="${v}">
+          <input type="radio" name="crit-${c.id}" value="${v}" onchange="updateScore()">
+          <span>${v==='yes'?'✓':v==='partial'?'½':v==='no'?'✗':'—'}</span>
+        </label></div>
+      </td>`).join('')}
+      <td style="vertical-align:top;padding-top:10px">
+        <textarea id="critnote-${c.id}" placeholder="Notes for ${c.name}…" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;resize:vertical;min-height:60px;transition:border-color .15s" onfocus="this.style.borderColor='var(--brand)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+      </td>
+    </tr>`).join('');
+}
+
+function agentInitials(name){return name.split(' ').map(n=>n[0]).join('').slice(0,2);}
+function agentColor(name){return AV_COLORS[AGENTS.indexOf(name)%AV_COLORS.length];}
+
+function calcScore(ratings){
+  let pts=0,max=0;
+  CRITERIA.forEach(c=>{
+    const v=ratings[c.id];
+    if(!v||v==='na')return;
+    max+=1;
+    if(v==='yes')pts+=1;
+    else if(v==='partial')pts+=0.5;
+  });
+  if(max===0)return null;
+  return Math.round((pts/max)*100);
+}
+
+function scoreVerdict(pct){
+  if(pct>=80)return{cls:'pass',label:'Pass'};
+  if(pct>=60)return{cls:'partial-pass',label:'Partial Pass'};
+  return{cls:'fail',label:'Fail'};
+}
+
+function updateScore(){
+  const ratings={};
+  CRITERIA.forEach(c=>{
+    const el=document.querySelector(`input[name="crit-${c.id}"]:checked`);
+    if(el)ratings[c.id]=el.value;
+  });
+  const pct=calcScore(ratings);
+  const disp=document.getElementById('score-display');
+  const fill=document.getElementById('score-bar-fill');
+  const verdict=document.getElementById('score-verdict');
+  const breakdown=document.getElementById('score-breakdown');
+  if(pct===null){
+    disp.textContent='—';disp.style.color='var(--muted)';
+    fill.style.width='0%';verdict.textContent='No score yet';verdict.style.color='var(--muted)';
+    breakdown.textContent='';return;
+  }
+  const v=scoreVerdict(pct);
+  const col=v.cls==='pass'?'var(--green)':v.cls==='partial-pass'?'var(--yellow)':'var(--red)';
+  disp.textContent=pct+'%';disp.style.color=col;
+  fill.style.width=pct+'%';fill.style.background=col;
+  verdict.textContent=v.label;verdict.style.color=col;
+  const answered=Object.values(ratings).filter(x=>x!=='na').length;
+  const critFail=CRITERIA.filter(c=>c.critical&&ratings[c.id]==='no').map(c=>c.name);
+  breakdown.textContent=answered+' of '+CRITERIA.length+' criteria scored'+(critFail.length?' · ⚠ Critical fail: '+critFail.slice(0,2).join(', '):'');
+}
+
+function submitAudit(){
+  const agent=document.getElementById('f-agent').value;
+  const week=document.getElementById('f-week').value;
+  const caseId=document.getElementById('f-caseid').value.trim();
+  const date=document.getElementById('f-date').value;
+  const notes=document.getElementById('f-notes').value.trim();
+  const followup=document.getElementById('f-followup').value;
+  const msg=document.getElementById('form-msg');
+
+  if(!agent||!week||!caseId||!date){
+    msg.textContent='⚠ Please fill in Agent, Week, Case ID, and Date.';
+    msg.style.color='var(--red)';msg.style.display='block';return;
+  }
+
+  const caseSummary={
+    investigation:document.getElementById('cs-investigation').value.trim(),
+    evaluation:document.getElementById('cs-evaluation').value.trim(),
+    resolution:document.getElementById('cs-resolution').value.trim(),
+  };
+
+  const ratings={};
+  const critNotes={};
+  let anyRated=false;
+  CRITERIA.forEach(c=>{
+    const el=document.querySelector(`input[name="crit-${c.id}"]:checked`);
+    if(el){ratings[c.id]=el.value;if(el.value!=='na')anyRated=true;}
+    const noteEl=document.getElementById('critnote-'+c.id);
+    if(noteEl&&noteEl.value.trim())critNotes[c.id]=noteEl.value.trim();
+  });
+  if(!anyRated){
+    msg.textContent='⚠ Please score at least one criteria.';
+    msg.style.color='var(--red)';msg.style.display='block';return;
+  }
+
+  const pct=calcScore(ratings);
+  const entry={
+    id:Date.now(),agent,week:parseInt(week),caseId,date,
+    caseSummary,ratings,critNotes,score:pct,verdict:scoreVerdict(pct).cls,notes,followup,
+    critFail:CRITERIA.filter(c=>ratings[c.id]==='no').map(c=>c.id),
+  };
+
+  const all=load();
+  if(editingId){
+    const idx=all.findIndex(a=>a.id===editingId);
+    if(idx>-1){entry.id=editingId;all[idx]=entry;}
+    msg.textContent='✓ Audit updated — '+agent+' · Case '+caseId+' (Score: '+pct+'%)';
+  }else{
+    all.push(entry);
+    msg.textContent='✓ Audit saved — '+agent+' · Case '+caseId+' (Score: '+pct+'%)';
+  }
+  save(all);
+  msg.style.color='var(--green)';msg.style.display='block';
+  resetForm();
+  updateHdrCount();
+  setTimeout(()=>msg.style.display='none',4000);
+}
+
+function editAudit(id){
+  const entry=load().find(a=>a.id===id);
+  if(!entry)return;
+  closePanel();
+  // Switch to Log Audit tab
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sec-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-log').classList.add('active');
+  document.querySelectorAll('.sec-tab')[1].classList.add('active');
+  // Pre-fill fields
+  document.getElementById('f-agent').value=entry.agent;
+  document.getElementById('f-week').value=entry.week;
+  document.getElementById('f-caseid').value=entry.caseId;
+  document.getElementById('f-date').value=entry.date;
+  document.getElementById('f-notes').value=entry.notes||'';
+  document.getElementById('f-followup').value=entry.followup||'no';
+  // Case summary
+  if(entry.caseSummary){
+    document.getElementById('cs-investigation').value=entry.caseSummary.investigation||'';
+    document.getElementById('cs-evaluation').value=entry.caseSummary.evaluation||'';
+    document.getElementById('cs-resolution').value=entry.caseSummary.resolution||'';
+  }
+  // Criteria ratings + notes
+  CRITERIA.forEach(c=>{
+    const val=entry.ratings&&entry.ratings[c.id];
+    if(val){
+      const radio=document.querySelector(`input[name="crit-${c.id}"][value="${val}"]`);
+      if(radio)radio.checked=true;
+    }
+    const noteEl=document.getElementById('critnote-'+c.id);
+    if(noteEl)noteEl.value=(entry.critNotes&&entry.critNotes[c.id])||'';
+  });
+  // Mark edit mode
+  editingId=entry.id;
+  document.getElementById('form-title').textContent='Edit Audit';
+  document.getElementById('edit-badge').style.display='inline-block';
+  updateScore();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetForm(){
+  ['f-agent','f-week','f-caseid','f-date','f-notes',
+   'cs-investigation','cs-evaluation','cs-resolution'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.value='';
+  });
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('f-followup').value='no';
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  CRITERIA.forEach(c=>{const n=document.getElementById('critnote-'+c.id);if(n)n.value='';});
+  editingId=null;
+  document.getElementById('form-title').textContent='New Audit Entry';
+  document.getElementById('edit-badge').style.display='none';
+  updateScore();
+}
+
+// ── History ────────────────────────────────────────
+function renderHistory(){
+  const agentF=document.getElementById('hist-agent').value;
+  const weekF=document.getElementById('hist-week').value;
+  const resultF=document.getElementById('hist-result').value;
+  let all=load();
+  if(agentF)all=all.filter(a=>a.agent===agentF);
+  if(weekF)all=all.filter(a=>a.week===parseInt(weekF));
+  if(resultF)all=all.filter(a=>a.verdict===resultF);
+  all=all.slice().reverse();
+
+  const body=document.getElementById('history-body');
+  const empty=document.getElementById('history-empty');
+  if(!all.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const col=agentColor;
+  body.innerHTML=all.map(e=>{
+    const v=scoreVerdict(e.score||0);
+    const fu=FOLLOWUP_LABELS[e.followup]||e.followup;
+    return`<tr onclick="openPanel(${e.id})">
+      <td><div class="agent-cell"><div class="avatar" style="background:${col(e.agent)}">${agentInitials(e.agent)}</div><div style="font-size:13px;font-weight:600">${e.agent}</div></div></td>
+      <td><span class="wk-chip">Wk ${e.week}</span></td>
+      <td style="font-weight:600;font-family:monospace;color:var(--teal)">${e.caseId}</td>
+      <td style="color:var(--sub)">${e.date}</td>
+      <td style="font-weight:700;color:${e.score>=80?'var(--green)':e.score>=60?'var(--yellow)':'var(--red)'}">${e.score!=null?e.score+'%':'—'}</td>
+      <td><span class="score-badge ${v.cls}">${v.label}</span></td>
+      <td style="font-size:12px;color:${e.followup!=='no'?'var(--yellow)':'var(--sub)'}">${fu}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;margin-right:4px" onclick="event.stopPropagation();editAudit(${e.id})">✏ Edit</button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="deleteAudit(event,${e.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteAudit(ev,id){
+  ev.stopPropagation();
+  if(!confirm('Delete this audit?'))return;
+  save(load().filter(a=>a.id!==id));
+  renderHistory();renderOverview();renderAgentSummary();updateHdrCount();
+}
+
+// ── Overview ───────────────────────────────────────
+function renderOverview(){
+  const all=load();
+  const total=all.length;
+  const passed=all.filter(a=>a.verdict==='pass').length;
+  const passRate=total?Math.round(passed/total*100):0;
+  const critFails=all.filter(a=>a.critFail&&a.critFail.length>0).length;
+
+  const avgScore=total?Math.round(all.reduce((s,a)=>s+(a.score||0),0)/total):null;
+  const col=avgScore==null?'var(--muted)':avgScore>=80?'var(--green)':avgScore>=60?'var(--yellow)':'var(--red)';
+
+  document.getElementById('ov-cards').innerHTML=`
+    <div class="sc c0"><div class="sc-label">Total Audits</div><div class="sc-value">${total}</div><div class="sc-sub">across all agents & weeks</div></div>
+    <div class="sc c1"><div class="sc-label">Average Score</div><div class="sc-value" style="color:${col}">${avgScore!=null?avgScore+'%':'—'}</div><div class="sc-sub">cohort average</div></div>
+    <div class="sc c2"><div class="sc-label">Pass Rate</div><div class="sc-value" style="color:var(--green)">${total?passRate+'%':'—'}</div><div class="sc-sub">${passed} of ${total} passed ≥80%</div></div>
+    <div class="sc c3"><div class="sc-label">Critical Fails</div><div class="sc-value" style="color:${critFails?'var(--red)':'var(--green)'}">${critFails}</div><div class="sc-sub">audits with critical misses</div></div>`;
+
+  // Agent bars
+  document.getElementById('ov-agent-bars').innerHTML=AGENTS.map(ag=>{
+    const agAudits=all.filter(a=>a.agent===ag);
+    const agAvg=agAudits.length?Math.round(agAudits.reduce((s,a)=>s+(a.score||0),0)/agAudits.length):null;
+    const c=agAvg==null?'var(--muted)':agAvg>=80?'var(--green)':agAvg>=60?'var(--yellow)':'var(--red)';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div class="avatar" style="background:${agentColor(ag)}">${agentInitials(ag)}</div>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:600">${ag}</span>
+          <span style="font-size:12px;font-weight:700;color:${c}">${agAvg!=null?agAvg+'%':'No data'} <span style="color:var(--muted);font-weight:400">(${agAudits.length} audits)</span></span>
+        </div>
+        <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${agAvg||0}%;background:${c};border-radius:3px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Week pass rate bars
+  document.getElementById('ov-week-bars').innerHTML=[1,2,3].map(w=>{
+    const wkAudits=all.filter(a=>a.week===w);
+    const wkPass=wkAudits.filter(a=>a.verdict==='pass').length;
+    const rate=wkAudits.length?Math.round(wkPass/wkAudits.length*100):null;
+    const c=rate==null?'var(--muted)':rate>=80?'var(--green)':rate>=60?'var(--yellow)':'var(--red)';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span class="wk-chip" style="min-width:48px;text-align:center">Wk ${w}</span>
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:12px;color:var(--sub)">${WEEKS[w]}</span>
+          <span style="font-size:12px;font-weight:700;color:${c}">${rate!=null?rate+'%':'No audits'} <span style="color:var(--muted);font-weight:400">(${wkAudits.length})</span></span>
+        </div>
+        <div style="height:5px;background:var(--border2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${rate||0}%;background:${c};border-radius:3px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Criteria breakdown
+  document.getElementById('ov-criteria-bars').innerHTML=CRITERIA.map(c=>{
+    const scored=all.filter(a=>a.ratings&&a.ratings[c.id]&&a.ratings[c.id]!=='na');
+    const yesCount=scored.filter(a=>a.ratings[c.id]==='yes').length;
+    const rate=scored.length?Math.round(yesCount/scored.length*100):null;
+    const col=rate==null?'var(--muted)':rate>=80?'var(--green)':rate>=60?'var(--yellow)':'var(--red)';
+    return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      ${c.critical?`<span style="font-size:10px;font-weight:700;color:var(--red);min-width:50px">CRITICAL</span>`:`<span style="min-width:50px"></span>`}
+      <div style="flex:1">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:600">${c.name}</span>
+          <span style="font-size:12px;font-weight:700;color:${col}">${rate!=null?rate+'%':'—'} <span style="color:var(--muted);font-weight:400;font-size:11px">(${scored.length} audits)</span></span>
+        </div>
+        <div style="height:4px;background:var(--border2);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${rate||0}%;background:${col};border-radius:3px;transition:width .4s"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Agent Summary ──────────────────────────────────
+let selectedAgent=null;
+function renderAgentSummary(){
+  const all=load();
+  document.getElementById('agent-cards').innerHTML=AGENTS.map(ag=>{
+    const agAudits=all.filter(a=>a.agent===ag);
+    const agAvg=agAudits.length?Math.round(agAudits.reduce((s,a)=>s+(a.score||0),0)/agAudits.length):null;
+    const col=agAvg==null?'var(--muted)':agAvg>=80?'var(--green)':agAvg>=60?'var(--yellow)':'var(--red)';
+    const wkScores=[1,2,3].map(w=>{
+      const wkA=agAudits.filter(a=>a.week===w);
+      return wkA.length?Math.round(wkA.reduce((s,a)=>s+(a.score||0),0)/wkA.length):null;
+    });
+    return`<div class="agent-card ${selectedAgent===ag?'selected':''}" onclick="selectAgent('${ag}')">
+      <div class="ac-header">
+        <div class="avatar" style="background:${agentColor(ag)};width:38px;height:38px;font-size:13px">${agentInitials(ag)}</div>
+        <div><div class="ac-name">${ag}</div><div class="ac-sub">${agAudits.length} audits logged</div></div>
+      </div>
+      <div class="sc-label">Avg Score</div>
+      <div class="ac-score" style="color:${col}">${agAvg!=null?agAvg+'%':'No data'}</div>
+      <div class="ac-wks">
+        ${wkScores.map((s,i)=>{
+          const c=s==null?'var(--muted)':s>=80?'var(--green)':s>=60?'var(--yellow)':'var(--red)';
+          return`<div class="ac-wk"><div class="ac-wk-lbl">Wk ${i+1}</div><div class="ac-wk-val" style="color:${c}">${s!=null?s+'%':'—'}</div></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  if(selectedAgent)renderAgentDetail(selectedAgent);
+}
+
+function selectAgent(ag){
+  selectedAgent=ag;
+  renderAgentSummary();
+  document.getElementById('agent-detail').style.display='block';
+  document.getElementById('detail-agent-name').textContent=ag;
+  renderAgentDetail(ag);
+}
+
+function renderAgentDetail(ag){
+  const all=load().filter(a=>a.agent===ag);
+  // Week tabs
+  document.getElementById('detail-week-tabs').innerHTML=['All',...[1,2,3].map(w=>'Wk '+w)].map((lbl,i)=>`
+    <button class="wtab ${i===0?'active':''}" onclick="filterDetailWeek(this,'${ag}',${i===0?'null':i})">${lbl}</button>`).join('');
+  renderDetailTable(ag,null);
+  drawDetailChart(ag);
+  renderDetailCriteria(ag,null);
+}
+
+function filterDetailWeek(btn,ag,wk){
+  document.querySelectorAll('.wtab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDetailTable(ag,wk);
+  renderDetailCriteria(ag,wk);
+}
+
+function renderDetailTable(ag,wk){
+  let audits=load().filter(a=>a.agent===ag);
+  if(wk)audits=audits.filter(a=>a.week===parseInt(wk));
+  audits=audits.slice().reverse();
+  document.getElementById('detail-history-body').innerHTML=audits.length?audits.map(e=>{
+    const v=scoreVerdict(e.score||0);
+    const fu=FOLLOWUP_LABELS[e.followup]||e.followup;
+    return`<tr onclick="openPanel(${e.id})">
+      <td><span class="wk-chip">Wk ${e.week}</span></td>
+      <td style="font-weight:600;font-family:monospace;color:var(--teal)">${e.caseId}</td>
+      <td style="color:var(--sub)">${e.date}</td>
+      <td style="font-weight:700;color:${e.score>=80?'var(--green)':e.score>=60?'var(--yellow)':'var(--red)'}">${e.score!=null?e.score+'%':'—'}</td>
+      <td><span class="score-badge ${v.cls}">${v.label}</span></td>
+      <td style="font-size:12px;color:${e.followup!=='no'?'var(--yellow)':'var(--sub)'}">${fu}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;margin-right:4px" onclick="event.stopPropagation();editAudit(${e.id})">✏ Edit</button>
+        <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="deleteAudit(event,${e.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">No audits for this period</td></tr>`;
+}
+
+function renderDetailCriteria(ag,wk){
+  let audits=load().filter(a=>a.agent===ag);
+  if(wk)audits=audits.filter(a=>a.week===parseInt(wk));
+  document.getElementById('detail-criteria').innerHTML=CRITERIA.map(c=>{
+    const scored=audits.filter(a=>a.ratings&&a.ratings[c.id]&&a.ratings[c.id]!=='na');
+    const yesCount=scored.filter(a=>a.ratings[c.id]==='yes').length;
+    const rate=scored.length?Math.round(yesCount/scored.length*100):null;
+    const col=rate==null?'var(--muted)':rate>=80?'var(--green)':rate>=60?'var(--yellow)':'var(--red)';
+    return`<div class="cb-item">
+      <div><div class="cb-name">${c.name}</div>${c.critical?`<div style="font-size:10px;color:var(--red);margin-top:2px">Critical</div>`:''}</div>
+      <div class="cb-score" style="color:${col}">${rate!=null?rate+'%':'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function drawDetailChart(ag){
+  const audits=load().filter(a=>a.agent===ag);
+  const wkAvgs=[1,2,3].map(w=>{
+    const wkA=audits.filter(a=>a.week===w);
+    return wkA.length?Math.round(wkA.reduce((s,a)=>s+(a.score||0),0)/wkA.length):null;
+  });
+  const svg=document.getElementById('detail-svg');
+  const W=420,H=130,pL=36,pR=16,pT=20,pB=36;
+  const valid=wkAvgs.map((s,i)=>s!=null?{i,s}:null).filter(Boolean);
+  if(!valid.length){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#606880" font-size="12" font-family="Inter,sans-serif">No data yet</text>`;return;}
+  const vs=valid.map(p=>p.s);
+  const mn=Math.max(0,Math.min(...vs)-15),mx=Math.min(100,Math.max(...vs)+15);
+  const px=i=>pL+i*(W-pL-pR)/2;
+  const py=s=>pT+(1-(s-mn)/(mx-mn))*(H-pT-pB);
+  const trend=vs[vs.length-1]-vs[0];
+  const col=trend>2?'#00D4AA':trend<-2?'#FF4D6A':'#FFB800';
+  let out='';
+  [50,75,100].forEach(v=>{if(v<mn||v>mx)return;const y=py(v);out+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#2A2F42" stroke-width="1" stroke-dasharray="4 4"/><text x="${pL-4}" y="${y+4}" font-size="9" fill="#606880" text-anchor="end" font-family="Inter,sans-serif">${v}</text>`;});
+  if(valid.length>1){
+    const pts=valid.map(({i,s})=>`${px(i)},${py(s)}`);
+    out+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  wkAvgs.forEach((s,i)=>{
+    if(s!=null){out+=`<circle cx="${px(i)}" cy="${py(s)}" r="5" fill="${col}" stroke="#181C26" stroke-width="2"/><text x="${px(i)}" y="${py(s)-9}" font-size="11" font-weight="700" fill="${col}" text-anchor="middle" font-family="Inter,sans-serif">${s}%</text>`;}
+    out+=`<text x="${px(i)}" y="${H-6}" font-size="10" fill="#606880" text-anchor="middle" font-family="Inter,sans-serif">Wk ${i+1}</text>`;
+  });
+  svg.innerHTML=out;
+}
+
+// ── Panel ──────────────────────────────────────────
+function openPanel(id){
+  const entry=load().find(a=>a.id===id);
+  if(!entry)return;
+  const v=scoreVerdict(entry.score||0);
+  document.getElementById('panel-av').style.background=agentColor(entry.agent);
+  document.getElementById('panel-av').textContent=agentInitials(entry.agent);
+  document.getElementById('panel-title').textContent=entry.agent+' — '+entry.caseId;
+  document.getElementById('panel-sub').textContent=WEEKS[entry.week]+' · '+entry.date;
+  // inject Edit button into panel header
+  const existingEditBtn=document.getElementById('panel-edit-btn');
+  if(existingEditBtn)existingEditBtn.remove();
+  const editBtn=document.createElement('button');
+  editBtn.id='panel-edit-btn';
+  editBtn.className='btn btn-ghost';
+  editBtn.style.cssText='padding:5px 14px;font-size:12px;margin-right:8px';
+  editBtn.textContent='✏ Edit';
+  editBtn.onclick=()=>editAudit(entry.id);
+  document.getElementById('panel-close').before(editBtn);
+  const col=entry.score>=80?'var(--green)':entry.score>=60?'var(--yellow)':'var(--red)';
+  const cs=entry.caseSummary||{};
+  document.getElementById('panel-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:16px">
+      <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Score</div>
+           <div style="font-size:28px;font-weight:800;color:${col}">${entry.score!=null?entry.score+'%':'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Result</div>
+           <span class="score-badge ${v.cls}">${v.label}</span></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Week</div>
+           <span class="wk-chip">Wk ${entry.week}</span></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Follow-up</div>
+           <div style="font-size:13px;font-weight:600;color:${entry.followup!=='no'?'var(--yellow)':'var(--sub)'}">${FOLLOWUP_LABELS[entry.followup]||entry.followup}</div></div>
+    </div>
+    ${(cs.investigation||cs.evaluation||cs.resolution)?`
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">📝 Case Summary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      ${['investigation','evaluation','resolution'].map(k=>cs[k]?`
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${k.charAt(0).toUpperCase()+k.slice(1)}</div>
+        <div style="font-size:12px;color:var(--sub);line-height:1.5">${cs[k]}</div>
+      </div>`:'').join('')}
+    </div>
+    <div class="divider" style="margin-bottom:14px"></div>`:''}
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">Criteria Scores</div>
+    <div>${CRITERIA.map(c=>{
+      const r=entry.ratings&&entry.ratings[c.id]||'na';
+      const note=entry.critNotes&&entry.critNotes[c.id];
+      return`<div class="crit-result" style="flex-direction:column;align-items:flex-start;gap:4px;padding:10px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <div class="crit-result-name">${c.name}</div>
+          <span class="crit-pip ${r}">${r==='yes'?'Yes':r==='partial'?'Partial':r==='no'?'No':'N/A'}</span>
+        </div>
+        ${note?`<div style="font-size:12px;color:var(--sub);padding:5px 10px;background:var(--card2);border-radius:6px;width:100%">${note}</div>`:''}
+      </div>`;
+    }).join('')}</div>
+    ${entry.notes?`<div class="divider"></div><div style="font-size:13px;font-weight:700;margin-bottom:8px">Coaching Notes</div><div style="font-size:13px;color:var(--sub);line-height:1.6;background:var(--card2);border-radius:var(--r-sm);padding:12px 14px">${entry.notes}</div>`:''}`;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePanel(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('panel').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// ── Export CSV ─────────────────────────────────────
+function exportCSV(){
+  const all=load();
+  if(!all.length){alert('No audits to export.');return;}
+  const header=['Agent','Week','Case ID','Date','Case Type','Category','Score','Result','Critical Fails',...CRITERIA.map(c=>c.name),'Notes','Follow-up'];
+  const rows=all.map(e=>[
+    e.agent,`Week ${e.week}`,e.caseId,e.date,e.caseType==='host'?'Host':'Guest',
+    e.category||'',e.score!=null?e.score+'%':'',scoreVerdict(e.score||0).label,
+    (e.critFail||[]).length,
+    ...CRITERIA.map(c=>(e.ratings&&e.ratings[c.id])||''),
+    (e.notes||'').replace(/,/g,' '),FOLLOWUP_LABELS[e.followup]||e.followup
+  ]);
+  const csv=[header,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='aircover-audits-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ── Nav ────────────────────────────────────────────
+function showSection(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.sec-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='history')renderHistory();
+  if(id==='overview')renderOverview();
+  if(id==='summary')renderAgentSummary();
+}
+
+function updateHdrCount(){
+  const n=load().length;
+  document.getElementById('hdr-count').textContent=n+' audit'+(n!==1?'s':'')+' logged';
+}
+
+// ── Boot ───────────────────────────────────────────
+buildCriteriaForm();
+document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+updateHdrCount();
+renderOverview();
+</script>
+</body>
+</html>
