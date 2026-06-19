@@ -4,12 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nesting Performance Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/airbnb-cereal-app" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --brand:#FF385C;
-  --bg:#0F1117; --surface:#181C26; --card:#1E2130; --card2:#252A3A;
-  --border:#2A2F42; --border2:#333849;
+  --brand-hover:#E31C5F;
+  --brand-glow:rgba(255,56,92,.18);
+  --bg:#090909; --surface:#101012; --card:#17171A; --card2:#1E1E22;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
   --text:#F0F2F8; --sub:#A0A8C0; --muted:#606880;
   --green:#00D4AA; --green-dim:rgba(0,212,170,.15);
   --yellow:#FFB800; --yellow-dim:rgba(255,184,0,.15);
@@ -20,7 +23,7 @@
   --r-sm:8px; --r-md:12px; --r-lg:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+body{font-family:'Airbnb Cereal App','Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 
 /* ── HEADER ── */
 .hdr{background:linear-gradient(135deg,#C0144A 0%,#E31C5F 50%,#FF385C 100%);padding:0 32px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 4px 20px rgba(255,56,92,.35);}
