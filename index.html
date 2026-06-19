@@ -460,26 +460,43 @@ function parseGvizTable(table){
   });
   return updated;
 }
-async function fetchFromSheet(){
-  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${SHEET_GID}`;
-  try{
-    const resp=await fetch(url);
-    if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const text=await resp.text();
-    const match=text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);
-    if(!match)throw new Error('Unexpected response format');
-    const json=JSON.parse(match[1]);
-    if(json.status==='error')throw new Error(json.errors?.[0]?.message||'Sheet error');
-    const updated=parseGvizTable(json.table);
-    if(updated){
-      applyScoreOverrides();
-      const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('last-updated').textContent='Live · '+ts;
+function fetchFromSheet(){
+  return new Promise(resolve=>{
+    const cbName='_gvizCb_'+Date.now();
+    const timeout=setTimeout(()=>{
+      cleanup();
+      console.warn('Sheet fetch timed out, using hardcoded data');
+      document.getElementById('last-updated').textContent='Offline data';
+      resolve();
+    },8000);
+    function cleanup(){
+      delete window[cbName];
+      const old=document.getElementById('_gviz_script');
+      if(old)old.remove();
+      clearTimeout(timeout);
     }
-  }catch(e){
-    console.warn('Sheet fetch failed, using hardcoded data:',e.message);
-    document.getElementById('last-updated').textContent='Offline data';
-  }
+    window[cbName]=function(json){
+      cleanup();
+      try{
+        if(json.status==='error')throw new Error(json.errors?.[0]?.message||'Sheet error');
+        const updated=parseGvizTable(json.table);
+        if(updated){
+          applyScoreOverrides();
+          const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+          document.getElementById('last-updated').textContent='Live · '+ts;
+        }
+      }catch(e){
+        console.warn('Sheet parse failed:',e.message);
+        document.getElementById('last-updated').textContent='Offline data';
+      }
+      resolve();
+    };
+    const s=document.createElement('script');
+    s.id='_gviz_script';
+    s.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;handler=${cbName}&gid=${SHEET_GID}`;
+    s.onerror=()=>{cleanup();console.warn('Sheet script load failed');document.getElementById('last-updated').textContent='Offline data';resolve();};
+    document.head.appendChild(s);
+  });
 }
 
 // ── Targets (per nesting program spec) ───────
