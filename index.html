@@ -186,6 +186,21 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
 .spec-footer-btn{font-size:11px;font-weight:600;color:var(--pink);background:none;border:none;cursor:pointer;padding:0;}
 .wf-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--sub);border:1px solid var(--border);background:var(--card2);transition:all .15s;}
 .wf-btn.active{background:var(--pink);border-color:var(--pink);color:#fff;}
+/* ── METRIC AUDIT ── */
+.audit-input{background:var(--card2);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s;width:100%;box-sizing:border-box;}
+.audit-input:focus{border-color:var(--brand);}
+.audit-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.audit-tbl thead th{padding:8px 12px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--card2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:left;}
+.audit-tbl thead th.center{text-align:center;}
+.audit-tbl tbody tr{border-bottom:1px solid var(--border);}
+.audit-tbl tbody tr:last-child{border-bottom:none;}
+.audit-tbl tbody td{padding:9px 12px;vertical-align:middle;}
+.audit-wk-hdr{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.audit-agent-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:16px;box-shadow:var(--sh-sm);overflow:hidden;}
+.audit-agent-hdr{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--card2);}
+.audit-agent-body{padding:16px 20px;}
+.audit-wk-block{margin-bottom:18px;}
+.audit-wk-block:last-child{margin-bottom:0;}
 
 /* ══ DRILL-DOWN PANEL ══ */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s;}
@@ -248,6 +263,9 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
   </button>
   <button class="sec-tab" onclick="showSection('specialist',this)">
     <span class="tab-icon">👤</span> Specialist View <span class="tab-badge" id="tab-badge-spec">…</span>
+  </button>
+  <button class="sec-tab" onclick="showSection('metricaudit',this)">
+    <span class="tab-icon">🔍</span> Metric Audit
   </button>
 </div>
 
@@ -379,6 +397,18 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
     </div>
   </section>
 
+  <!-- ════════════════════════════
+       SECTION 4: METRIC AUDIT
+  ════════════════════════════ -->
+  <section class="section" id="sec-metricaudit">
+    <div class="sechdr" style="margin-bottom:6px">
+      <h2>Metric Audit — Missed Targets</h2>
+      <span class="hint">Auto-detected from data · Add case IDs and reasons inline</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Only metrics below their weekly target are shown. Cases and Reason fields are editable and saved locally.</p>
+    <div id="metric-audit-body"></div>
+  </section>
+
 </div><!-- /main -->
 
 <!-- ═══ DRILL-DOWN PANEL ═══ -->
@@ -455,6 +485,7 @@ function refresh(){
   renderOverall();
   renderWbw();
   renderSpecialist();
+  renderMetricAudit();
 }
 
 // ── Helpers ──────────────────────────────────
@@ -956,6 +987,91 @@ function miniMetricChart(agentName,agentIdx){
   });
   out+=`<text x="${LW}" y="${SVG_H-2}" font-size="8" fill="#606880" font-family="Inter,sans-serif">Green = on target · Yellow = near · Red = below</text>`;
   return`<svg width="100%" viewBox="0 0 ${SVG_W} ${SVG_H}" style="overflow:visible;display:block">${out}</svg>`;
+}
+
+// ═══════════════════════════════════
+// SECTION 4: METRIC AUDIT
+// ═══════════════════════════════════
+const AUDIT_KEY='nesting-metric-audit';
+function loadAuditNotes(){try{return JSON.parse(localStorage.getItem(AUDIT_KEY)||'{}');}catch(e){return{};}}
+function saveAuditNote(agent,wk,metric,field,value){
+  const all=loadAuditNotes();
+  const k=`${agent}__${wk}__${metric}`;
+  all[k]=all[k]||{};
+  all[k][field]=value;
+  localStorage.setItem(AUDIT_KEY,JSON.stringify(all));
+}
+
+const AUDIT_METRICS=[
+  {k:'quality',    lbl:'Quality',            inv:false,sfx:'%'},
+  {k:'fcs',        lbl:'% First Contact SLA',inv:false,sfx:'%'},
+  {k:'airbnb_sla', lbl:'Airbnb Resp SLA',    inv:false,sfx:'%'},
+  {k:'ttr',        lbl:'TTR <14d',           inv:false,sfx:'%'},
+  {k:'spd',        lbl:'SPD',               inv:false,sfx:''},
+  {k:'host_appeal',lbl:'Host Appeal Rate',   inv:true, sfx:'%'},
+  {k:'guest_appeal',lbl:'Guest Appeal Rate', inv:true, sfx:'%'},
+  {k:'three_contact',lbl:'3+ Contact Rate',  inv:true, sfx:'%'},
+  {k:'nps',        lbl:'Paid Host NPS',      inv:false,sfx:''},
+];
+const WK_DATES={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22'};
+
+function renderMetricAudit(){
+  const notes=loadAuditNotes();
+  const agents=RAW[1].map(a=>a.name);
+  document.getElementById('metric-audit-body').innerHTML=agents.map((name,idx)=>{
+    const color=AV[idx%AV.length];
+    const init=name.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const weekBlocks=[1,2,3].map(wk=>{
+      const a=RAW[wk]&&RAW[wk][idx];
+      const t=T[wk];
+      const hasData=a&&AUDIT_METRICS.some(m=>a[m.k]!=null);
+      if(!hasData) return`<div class="audit-wk-block">
+        <div class="audit-wk-hdr">Week ${wk} <span style="color:var(--muted);font-size:10px;font-weight:500">${WK_DATES[wk]}</span><span style="color:var(--muted);font-size:11px;margin-left:auto">No data yet</span></div>
+      </div>`;
+      const missed=AUDIT_METRICS.filter(m=>{
+        const val=a[m.k],tgt=t[m.k];
+        if(val==null||tgt==null)return false;
+        return m.inv?val>tgt:val<tgt;
+      });
+      const statusHtml=missed.length===0
+        ?`<span style="color:var(--green);font-size:11px;margin-left:auto">✓ All metrics on target</span>`
+        :`<span style="color:var(--red);font-size:11px;margin-left:auto">${missed.length} metric${missed.length>1?'s':''} below target</span>`;
+      const tableHtml=missed.length===0?'':`
+        <table class="audit-tbl">
+          <thead><tr>
+            <th>Metric</th>
+            <th class="center">Score</th>
+            <th class="center">Target</th>
+            <th style="min-width:160px">Cases</th>
+            <th style="min-width:220px">Reason</th>
+          </tr></thead>
+          <tbody>${missed.map(m=>{
+            const val=a[m.k],tgt=t[m.k];
+            const nk=`${name}__${wk}__${m.k}`;
+            const note=notes[nk]||{};
+            const tgtTxt=(m.inv?'≤':'≥')+tgt+(m.sfx);
+            return`<tr>
+              <td style="font-weight:600">${m.lbl}</td>
+              <td style="text-align:center"><span style="font-weight:700;color:var(--red)">${val}${m.sfx}</span></td>
+              <td style="text-align:center;color:var(--muted)">${tgtTxt}</td>
+              <td><input class="audit-input" placeholder="e.g. CS-12345, CS-67890" value="${(note.cases||'').replace(/"/g,'&quot;')}" oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value)"/></td>
+              <td><input class="audit-input" placeholder="Add reason for missing target…" value="${(note.reason||'').replace(/"/g,'&quot;')}" oninput="saveAuditNote('${name}',${wk},'${m.k}','reason',this.value)"/></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`;
+      return`<div class="audit-wk-block">
+        <div class="audit-wk-hdr">Week ${wk} <span style="color:var(--muted);font-size:10px;font-weight:500">${WK_DATES[wk]}</span>${statusHtml}</div>
+        ${tableHtml}
+      </div>`;
+    }).join('');
+    return`<div class="audit-agent-card">
+      <div class="audit-agent-hdr">
+        <div class="avatar" style="background:${color};width:36px;height:36px;font-size:13px">${init}</div>
+        <div style="font-size:15px;font-weight:700">${name}</div>
+      </div>
+      <div class="audit-agent-body">${weekBlocks}</div>
+    </div>`;
+  }).join('');
 }
 
 // ── Init ─────────────────────────────────────
