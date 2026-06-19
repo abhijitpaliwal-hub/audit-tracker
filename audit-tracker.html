@@ -519,10 +519,32 @@ async function syncFromFirebase(){
     const resp=await fetch(`${url}/audits.json`);
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const raw=await resp.json();
-    if(raw===null){DB=[];}
-    else{
-      DB=Object.values(raw).sort((a,b)=>a.id-b.id);
-      // also update local backup
+    if(raw===null){
+      // Firebase is empty — check if we have local data to migrate up
+      const local=JSON.parse(localStorage.getItem('aircover-audits')||'[]');
+      if(local.length>0){
+        DB=local;
+        // Push local data up to Firebase so everyone can see it
+        await save(local);
+        setSyncStatus('synced');
+      } else {
+        DB=[];
+        setSyncStatus('synced');
+      }
+    } else {
+      // Merge: combine Firebase entries with any local-only entries
+      const remote=Object.values(raw);
+      const local=JSON.parse(localStorage.getItem('aircover-audits')||'[]');
+      const remoteIds=new Set(remote.map(e=>e.id));
+      const localOnly=local.filter(e=>!remoteIds.has(e.id));
+      const merged=[...remote,...localOnly].sort((a,b)=>a.id-b.id);
+      if(localOnly.length>0){
+        // Push merged set back to Firebase
+        DB=merged;
+        await save(merged);
+      } else {
+        DB=merged;
+      }
       try{localStorage.setItem('aircover-audits',JSON.stringify(DB));}catch(e){}
     }
     setSyncStatus('synced');
