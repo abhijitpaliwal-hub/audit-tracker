@@ -271,6 +271,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
         <label>Audit Date</label>
         <input type="date" id="f-date">
       </div>
+      <div class="form-group">
+        <label>Auditor Name</label>
+        <input type="text" id="f-auditor" placeholder="Your name">
+      </div>
     </div>
 
     <div class="divider"></div>
@@ -520,6 +524,7 @@ function submitAudit(){
   const week=document.getElementById('f-week').value;
   const caseId=document.getElementById('f-caseid').value.trim();
   const date=document.getElementById('f-date').value;
+  const auditor=document.getElementById('f-auditor').value.trim();
   const notes=document.getElementById('f-notes').value.trim();
   const followup=document.getElementById('f-followup').value;
   const msg=document.getElementById('form-msg');
@@ -547,7 +552,7 @@ function submitAudit(){
 
   const pct=calcScore(ratings);
   const entry={
-    id:Date.now(),agent,week:parseInt(week),caseId,date,
+    id:Date.now(),agent,week:parseInt(week),caseId,date,auditor,
     caseSummary,ratings,critNotes,score:pct,verdict:scoreVerdict(pct).cls,notes,followup,
     critFail:CRITERIA.filter(c=>ratings[c.id]==='no').map(c=>c.id),
   };
@@ -582,6 +587,7 @@ function editAudit(id){
   document.getElementById('f-week').value=entry.week;
   document.getElementById('f-caseid').value=entry.caseId;
   document.getElementById('f-date').value=entry.date;
+  document.getElementById('f-auditor').value=entry.auditor||'';
   document.getElementById('f-notes').value=entry.notes||'';
   document.getElementById('f-followup').value=entry.followup||'no';
   // Case summary
@@ -605,7 +611,7 @@ function editAudit(id){
 }
 
 function resetForm(){
-  ['f-agent','f-week','f-caseid','f-date','f-notes','cs-summary'].forEach(id=>{
+  ['f-agent','f-week','f-caseid','f-date','f-auditor','f-notes','cs-summary'].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.value='';
   });
@@ -868,7 +874,7 @@ function openPanel(id){
   document.getElementById('panel-av').style.background=agentColor(entry.agent);
   document.getElementById('panel-av').textContent=agentInitials(entry.agent);
   document.getElementById('panel-title').textContent=entry.agent+' — '+entry.caseId;
-  document.getElementById('panel-sub').textContent=WEEKS[entry.week]+' · '+entry.date;
+  document.getElementById('panel-sub').textContent=WEEKS[entry.week]+' · '+entry.date+(entry.auditor?' · Auditor: '+entry.auditor:'');
   // inject Edit button into panel header
   const existingEditBtn=document.getElementById('panel-edit-btn');
   if(existingEditBtn)existingEditBtn.remove();
