@@ -184,6 +184,8 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
 .spec-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
 .spec-footer-txt{font-size:11px;color:var(--sub);}
 .spec-footer-btn{font-size:11px;font-weight:600;color:var(--pink);background:none;border:none;cursor:pointer;padding:0;}
+.wf-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--sub);border:1px solid var(--border);background:var(--card2);transition:all .15s;}
+.wf-btn.active{background:var(--pink);border-color:var(--pink);color:#fff;}
 
 /* ══ DRILL-DOWN PANEL ══ */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s;}
@@ -279,10 +281,10 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
       </div>
       <div class="card card-pad">
         <div class="sechdr" style="margin-bottom:14px">
-          <h2>Cohort Averages</h2>
-          <span class="hint" id="cohort-avg-hint">latest week vs targets</span>
+          <h2>Agent vs Target</h2>
+          <span class="hint" id="cohort-avg-hint">latest week · each agent vs target</span>
         </div>
-        <div class="metric-grid" id="overall-metric-grid"></div>
+        <div id="overall-metric-grid"></div>
       </div>
     </div>
 
@@ -367,6 +369,14 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
       <span class="hint">Ranked by latest week score · Click card for detail</span>
     </div>
     <div class="spec-grid" id="spec-grid"></div>
+    <div style="margin-top:24px">
+      <div class="sechdr">
+        <h2>All Agents — Metric Comparison</h2>
+        <span class="hint">Agent bars vs target line · select week</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px" id="spec-wk-filters"></div>
+      <div class="card card-pad"><div id="spec-comp-chart"></div></div>
+    </div>
   </section>
 
 </div><!-- /main -->
@@ -511,22 +521,18 @@ function renderOverall(){
   const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
   const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
   const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
-  // Overall avg = mean of all per-week cohort averages that have data
-  const weekAvgs=[1,2,3,4].map(w=>avgSc(w)).filter(v=>v!=null);
-  const overallAvg=weekAvgs.length?Math.round(weekAvgs.reduce((s,v)=>s+v,0)/weekAvgs.length):null;
-  const avgColor=overallAvg==null?'var(--muted)':overallAvg>=80?'var(--green)':overallAvg>=65?'var(--yellow)':'var(--red)';
-  const wksLabel=weekAvgs.length===1?'Week 1 only':`Wks 1–${weekAvgs.length} avg`;
-  // Summary cards
-  document.getElementById('overall-cards').innerHTML=`
+  const t=T[lw];
+  // 3 KPI cards — no avg score card
+  const cardsEl=document.getElementById('overall-cards');
+  cardsEl.style.gridTemplateColumns='repeat(3,1fr)';
+  cardsEl.innerHTML=`
     <div class="sc c0"><div class="sc-icon blue">👥</div><div class="sc-label">Agents in Nesting</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
-    <div class="sc c1"><div class="sc-icon purple">📊</div><div class="sc-label">Overall Avg Score</div><div class="sc-value" style="color:${avgColor}">${overallAvg!=null?overallAvg+'%':'—'}</div><div class="sc-sub">${wksLabel}</div></div>
-    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">agents ≥80% week ${lw}</div></div>
+    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">agents ≥80% this week</div></div>
     <div class="sc c3"><div class="sc-icon red">⚠️</div><div class="sc-label">At Risk</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">agents below 65%</div></div>`;
   // Risk list
   const risky=data.filter(a=>{const s=sc(a,lw);return s!=null&&s<65;}).sort((a,b)=>sc(a,lw)-sc(b,lw));
-  const t=T[lw];
   document.getElementById('overall-risk').innerHTML=risky.length===0
-    ?`<div class="empty-ok">✓ No agents at risk in week ${lw}</div>`
+    ?`<div class="empty-ok">✓ No agents at risk this week</div>`
     :risky.map(a=>{
       const s=sc(a,lw),idx=RAW[lw].findIndex(x=>x.name===a.name);
       const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
@@ -547,35 +553,22 @@ function renderOverall(){
         <span class="risk-tag ${tag}">${s}%</span>
       </div>`;
     }).join('');
-  // Metric grid (cohort averages for latest week)
-  const defs=[
-    {k:'quality',lbl:'Quality',inv:false,tgt:`≥${t.quality}%`,ok:v=>v>=t.quality,fmt:v=>v+'%'},
-    {k:'fcs',lbl:'1st Contact SLA',inv:false,tgt:`≥${t.fcs}%`,ok:v=>v>=t.fcs,fmt:v=>v+'%'},
-    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',inv:false,tgt:`≥${t.airbnb_sla}%`,ok:v=>v>=t.airbnb_sla,fmt:v=>v+'%'},
-    {k:'host_appeal',lbl:'Host Appeal',inv:true,tgt:`≤${t.host_appeal}%`,ok:v=>v<=t.host_appeal,fmt:v=>v+'%'},
-    {k:'guest_appeal',lbl:'Guest Appeal',inv:true,tgt:`≤${t.guest_appeal}%`,ok:v=>v<=t.guest_appeal,fmt:v=>v+'%'},
-    {k:'three_contact',lbl:'3+ Contact',inv:true,tgt:`≤${t.three_contact}%`,ok:v=>v<=t.three_contact,fmt:v=>v+'%'},
-    {k:'spd',lbl:'SPD',inv:false,tgt:`≥${t.spd}`,ok:v=>v>=t.spd,fmt:v=>v},
-    {k:'nps',lbl:'Paid Host NPS',inv:false,tgt:`≥${t.nps}`,ok:v=>v>=t.nps,fmt:v=>v},
-    {k:'ttr',lbl:'TTR <14d',inv:false,tgt:t.ttr!=null?`≥${t.ttr}%`:'N/A this week',ok:v=>t.ttr!=null&&v>=t.ttr,fmt:v=>v+'%'},
-  ];
-  document.getElementById('overall-metric-grid').innerHTML=defs.map(d=>{
-    const val=avg(lw,d.k);
-    if(val==null) return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:var(--muted)">N/A</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
-    const ok=d.ok(val);
-    return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:${ok?'var(--green)':'var(--red)'}">${d.fmt(val)}</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
-  }).join('');
-  // Table
+  // Agent vs Target chart (replaces metric grid)
+  drawAgentVsTargetChart('overall-metric-grid',lw);
+  // Table — Score = overall avg across all weeks with data
+  document.getElementById('leaderboard-hint').textContent='Overall avg score (all weeks) · Click row for detail';
   document.getElementById('overall-tbody').innerHTML=data.map((a,i)=>{
-    const s=sc(a,lw),rank=i+1;
+    const weekScores=[1,2,3,4].map(w=>{const r=RAW[w].find(x=>x.name===a.name);return sc(r,w);}).filter(s=>s!=null);
+    const overallScore=weekScores.length?Math.round(weekScores.reduce((s,v)=>s+v,0)/weekScores.length):null;
+    const rank=i+1;
     const rankHTML=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':`<span class="rank-num">${rank}</span>`;
     const idx=RAW[lw].findIndex(x=>x.name===a.name);
     const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
     const qcls=a.quality!=null?(a.quality>=85?'green':a.quality>=72?'yellow':'red'):'na';
     return`<tr onclick="openPanel('${a.name}')">
       <td style="text-align:center;font-size:16px">${rankHTML}</td>
-      <td><div class="agent-cell"><div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div><div><div class="agent-name">${a.name}</div><div class="agent-sub">Week ${lw}</div></div></div></td>
-      <td style="text-align:center"><span class="badge ${bc(s)}">${s!=null?s+'%':'N/A'}</span></td>
+      <td><div class="agent-cell"><div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div><div><div class="agent-name">${a.name}</div></div></div></td>
+      <td style="text-align:center"><span class="badge ${bc(overallScore)}">${overallScore!=null?overallScore+'%':'N/A'}</span></td>
       <td>${a.quality!=null?prog(a.quality,100,qcls):'<span class="mv na">N/A</span>'}</td>
       <td><span class="mv ${cvt(a.ttr,t.ttr)}">${a.ttr!=null?a.ttr+'%':'N/A'}</span></td>
       <td><span class="mv ${cvt(a.fcs,t.fcs)}">${a.fcs!=null?a.fcs+'%':'N/A'}</span></td>
@@ -713,13 +706,13 @@ function renderSpecialist(){
   const lw=latestWeek();
   const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
   const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
-  const avgScore=scores.length?Math.round(scores.reduce((s,v)=>s+v,0)/scores.length):null;
   const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
-  const avgColor=avgScore==null?'var(--muted)':avgScore>=80?'var(--green)':avgScore>=65?'var(--yellow)':'var(--red)';
-  document.getElementById('spec-cards').innerHTML=`
+  // 3 KPI cards — no avg score
+  const specCardsEl=document.getElementById('spec-cards');
+  specCardsEl.style.gridTemplateColumns='repeat(3,1fr)';
+  specCardsEl.innerHTML=`
     <div class="sc c0"><div class="sc-icon blue">👥</div><div class="sc-label">Total Specialists</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
-    <div class="sc c1"><div class="sc-icon purple">📊</div><div class="sc-label">Week ${lw} Avg Score</div><div class="sc-value" style="color:${avgColor}">${avgScore!=null?avgScore+'%':'—'}</div><div class="sc-sub">vs week ${lw} targets</div></div>
-    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">≥80% week ${lw}</div></div>
+    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">≥80% this week</div></div>
     <div class="sc c3"><div class="sc-icon red">⚠️</div><div class="sc-label">Needs Coaching</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">below 65%</div></div>`;
   document.getElementById('spec-grid').innerHTML=data.map((a,rank)=>{
     const s=sc(a,lw);
@@ -730,18 +723,10 @@ function renderSpecialist(){
     const trendDelta=validWkScores.length>=2?validWkScores[validWkScores.length-1]-validWkScores[0]:null;
     const trendTxt=trendDelta==null?'':trendDelta>0?`↑ ${trendDelta}pts`:`↓ ${Math.abs(trendDelta)}pts`;
     const trendCol=trendDelta==null?'var(--muted)':trendDelta>0?'var(--green)':trendDelta<0?'var(--red)':'var(--muted)';
-    const t=T[lw];
-    const fmtM=(val,suffix='%')=>val!=null?val+suffix:'N/A';
-    const keyMetrics=[
-      {lbl:'Quality',val:fmtM(a.quality),cls:cvt(a.quality,t.quality)},
-      {lbl:'Host Appeal',val:fmtM(a.host_appeal),cls:cvt(a.host_appeal,t.host_appeal,true)},
-      {lbl:'SPD',val:fmtM(a.spd,''),cls:cvt(a.spd,t.spd)},
-      {lbl:'Paid NPS',val:fmtM(a.nps,''),cls:cvt(a.nps,t.nps)},
-    ];
-    const dots=wkScores.map(ws=>`<div class="spec-wk-dot ${bc(ws)}"></div>`).join('');
-    const rankLabel=rank===0?'🥇 Top performer':rank===1?'🥈 2nd':rank===2?'🥉 3rd':`Rank #${rank+1}`;
     const atRisk=s!=null&&s<65;
     const sColor=s==null?'var(--muted)':s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)';
+    const rankLabel=rank===0?'🥇 Top performer':rank===1?'🥈 2nd':rank===2?'🥉 3rd':`Rank #${rank+1}`;
+    const dots=wkScores.map(ws=>`<div class="spec-wk-dot ${bc(ws)}"></div>`).join('');
     return`<div class="spec-card" onclick="openPanel('${a.name}')">
       <div class="spec-header">
         <div class="spec-avatar" style="background:${AV[idx%AV.length]}">${init}</div>
@@ -749,22 +734,34 @@ function renderSpecialist(){
           <div class="spec-name">${a.name}</div>
           <div class="spec-rank">${rankLabel}${atRisk?' · <span style="color:var(--red);font-weight:700">⚠ At Risk</span>':''}</div>
         </div>
-      </div>
-      <div class="spec-score-row">
-        <span class="spec-score-lbl">Week ${lw} Score</span>
-        <div style="display:flex;align-items:baseline;gap:4px">
-          <span class="spec-score-val" style="color:${sColor}">${s!=null?s+'%':'—'}</span>
-          <span class="spec-score-trend" style="color:${trendCol}">${trendTxt}</span>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:800;color:${sColor}">${s!=null?s+'%':'—'}</div>
+          <div style="font-size:11px;font-weight:600;color:${trendCol}">${trendTxt||'—'}</div>
         </div>
       </div>
-      <div class="spec-metrics">${keyMetrics.map(m=>`<div class="spm"><div class="spm-lbl">${m.lbl}</div><div class="spm-val ${m.cls}">${m.val}</div></div>`).join('')}</div>
-      <div style="margin-bottom:6px"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Week Progression</div><div class="spec-wk-row">${dots}</div></div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">Wk1 / Wk2 per metric vs target</div>
+      ${miniMetricChart(a.name,idx)}
+      <div style="margin:10px 0 0"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Week Progression</div><div class="spec-wk-row">${dots}</div></div>
       <div class="spec-footer">
         <span class="spec-footer-txt">${a.closed!=null?a.closed:0} claims closed · ${a.assigned!=null?a.assigned:0} assigned</span>
         <button class="spec-footer-btn">View detail →</button>
       </div>
     </div>`;
   }).join('');
+  // Render comparison chart section
+  renderSpecCompChart(lw);
+}
+let specCompWk=null;
+function renderSpecCompChart(wk){
+  specCompWk=wk||latestWeek();
+  const filtersEl=document.getElementById('spec-wk-filters');
+  if(filtersEl){
+    filtersEl.innerHTML=[1,2,3,4].map(w=>{
+      const hasData=RAW[w].some(a=>a.quality!=null||a.fcs!=null||a.airbnb_sla!=null||a.ttr!=null);
+      return hasData?`<button class="wf-btn ${w===specCompWk?'active':''}" onclick="renderSpecCompChart(${w})">Week ${w}</button>`:'';
+    }).join('');
+  }
+  drawAgentVsTargetChart('spec-comp-chart',specCompWk);
 }
 
 // ═══════════════════════════════════
@@ -859,6 +856,106 @@ function drawPanelChart(allScores){
     out+=`<text x="${px(i)}" y="${H-8}" font-size="11" fill="${s!=null?'#B0B0B0':'#D0D0D0'}" text-anchor="middle" font-family="Inter,sans-serif">Week ${i+1}</text>`;
   });
   svg.innerHTML=out;
+}
+
+// ═══════════════════════════════════
+// CHART: Agent vs Target (grouped horizontal bars)
+// ═══════════════════════════════════
+function drawAgentVsTargetChart(elId,lw){
+  const t=T[lw],agents=RAW[lw];
+  const MLIST=[
+    {k:'quality',   lbl:'Quality',        inv:false,tgt:t.quality,   sfx:'%'},
+    {k:'fcs',       lbl:'1st Contact SLA',inv:false,tgt:t.fcs,       sfx:'%'},
+    {k:'airbnb_sla',lbl:'Airbnb SLA',     inv:false,tgt:t.airbnb_sla,sfx:'%'},
+    {k:'ttr',       lbl:'TTR <14d',       inv:false,tgt:t.ttr,       sfx:'%'},
+    {k:'spd',       lbl:'SPD',            inv:false,tgt:t.spd,       sfx:''},
+    {k:'host_appeal',lbl:'Host Appeal',   inv:true, tgt:t.host_appeal,sfx:'%'},
+    {k:'guest_appeal',lbl:'Guest Appeal', inv:true, tgt:t.guest_appeal,sfx:'%'},
+  ].filter(m=>m.tgt!=null&&agents.some(a=>a[m.k]!=null));
+  const el=document.getElementById(elId);
+  if(!MLIST.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No metric data yet for this week</div>';return;}
+  const LW=122,BW=230,BH=12,GAP=3,MGAP=14,MT=22,MB=34;
+  const rowH=agents.length*(BH+GAP)-GAP;
+  const SVG_H=MT+MLIST.length*(rowH+MGAP)-MGAP+MB;
+  const SVG_W=LW+BW+72;
+  const maxR=1.3; // bars scale to 130% of target
+  const tgtX=LW+(1/maxR)*BW;
+  let out='';
+  // grid verticals
+  [0,0.5,1,1.3].forEach(r=>{
+    const x=LW+(r/maxR)*BW;
+    out+=`<line x1="${x}" y1="${MT-4}" x2="${x}" y2="${SVG_H-MB}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+    out+=`<text x="${x}" y="${MT-6}" font-size="9" fill="#606880" text-anchor="middle" font-family="Inter,sans-serif">${Math.round(r*100)}%</text>`;
+  });
+  // target line
+  out+=`<line x1="${tgtX}" y1="${MT-14}" x2="${tgtX}" y2="${SVG_H-MB}" stroke="rgba(255,184,0,.55)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  out+=`<text x="${tgtX}" y="${MT-16}" font-size="9" fill="#FFB800" text-anchor="middle" font-family="Inter,sans-serif">Target</text>`;
+  MLIST.forEach((m,mi)=>{
+    const yBase=MT+mi*(rowH+MGAP);
+    out+=`<text x="${LW-7}" y="${yBase+rowH/2+4}" font-size="11" fill="#A0A8C0" text-anchor="end" font-family="Inter,sans-serif">${m.lbl}</text>`;
+    agents.forEach((agent,ai)=>{
+      const val=agent[m.k];
+      const y=yBase+ai*(BH+GAP);
+      if(val==null){
+        out+=`<rect x="${LW}" y="${y}" width="16" height="${BH}" rx="2" fill="rgba(255,255,255,0.05)"/>`;
+        out+=`<text x="${LW+20}" y="${y+BH-2}" font-size="9" fill="#606880" font-family="Inter,sans-serif">N/A</text>`;
+        return;
+      }
+      const ratio=m.inv?(m.tgt/Math.max(val,.01)):(val/m.tgt);
+      const barW=Math.max(Math.min(ratio/maxR,1)*BW,4);
+      const color=AV[ai%AV.length];
+      out+=`<rect x="${LW}" y="${y}" width="${barW}" height="${BH}" rx="2" fill="${color}" opacity="0.8"/>`;
+      out+=`<text x="${LW+barW+4}" y="${y+BH-2}" font-size="10" font-weight="600" fill="${color}" font-family="Inter,sans-serif">${val}${m.sfx}</text>`;
+    });
+  });
+  // legend
+  agents.forEach((agent,ai)=>{
+    const legX=LW+ai*Math.floor((BW+72)/agents.length);
+    out+=`<rect x="${legX}" y="${SVG_H-MB+10}" width="10" height="10" rx="2" fill="${AV[ai%AV.length]}"/>`;
+    out+=`<text x="${legX+14}" y="${SVG_H-MB+19}" font-size="11" fill="#A0A8C0" font-family="Inter,sans-serif">${agent.name.split(' ')[0]}</text>`;
+  });
+  el.innerHTML=`<svg width="100%" viewBox="0 0 ${SVG_W} ${SVG_H}" style="overflow:visible;display:block">${out}</svg>`;
+}
+
+// ═══════════════════════════════════
+// CHART: Mini per-metric weekly bars (used in spec cards)
+// ═══════════════════════════════════
+function miniMetricChart(agentName,agentIdx){
+  const METRICS=[
+    {k:'quality',   lbl:'Quality',inv:false},
+    {k:'fcs',       lbl:'1st SLA',inv:false},
+    {k:'airbnb_sla',lbl:'AB SLA', inv:false},
+    {k:'spd',       lbl:'SPD',    inv:false},
+  ];
+  const LW=52,BW=128,BH=10,GAP=2,MGAP=7,MT=4,MB=14;
+  const rowH=2*(BH+GAP);
+  const SVG_H=MT+METRICS.length*(rowH+MGAP)+MB;
+  const SVG_W=LW+BW+52;
+  let out='';
+  METRICS.forEach((m,mi)=>{
+    const yBase=MT+mi*(rowH+MGAP);
+    out+=`<text x="${LW-4}" y="${yBase+rowH/2+3}" font-size="10" fill="#606880" text-anchor="end" font-family="Inter,sans-serif">${m.lbl}</text>`;
+    [1,2].forEach((wk,wi)=>{
+      const tgt=T[wk][m.k];
+      const agentRow=RAW[wk]&&RAW[wk][agentIdx];
+      const val=agentRow?agentRow[m.k]:null;
+      const y=yBase+wi*(BH+GAP);
+      out+=`<text x="${LW-2}" y="${y+BH-1}" font-size="8" fill="#606880" text-anchor="end" font-family="Inter,sans-serif">W${wk}</text>`;
+      if(val==null||tgt==null){
+        out+=`<rect x="${LW}" y="${y}" width="14" height="${BH}" rx="2" fill="rgba(255,255,255,0.06)"/>`;
+        out+=`<text x="${LW+18}" y="${y+BH-1}" font-size="9" fill="#606880" font-family="Inter,sans-serif">—</text>`;
+        return;
+      }
+      const ratio=m.inv?(tgt/Math.max(val,.01)):(val/tgt);
+      const barW=Math.min(ratio*BW*.8,BW);
+      const color=ratio>=1?'#00D4AA':ratio>=.85?'#FFB800':'#FF4D6A';
+      const sfx=m.k==='spd'?'':'%';
+      out+=`<rect x="${LW}" y="${y}" width="${Math.max(barW,4)}" height="${BH}" rx="2" fill="${color}" opacity="0.75"/>`;
+      out+=`<text x="${LW+Math.max(barW,4)+3}" y="${y+BH-1}" font-size="9" font-weight="600" fill="${color}" font-family="Inter,sans-serif">${val}${sfx}</text>`;
+    });
+  });
+  out+=`<text x="${LW}" y="${SVG_H-2}" font-size="8" fill="#606880" font-family="Inter,sans-serif">Green = on target · Yellow = near · Red = below</text>`;
+  return`<svg width="100%" viewBox="0 0 ${SVG_W} ${SVG_H}" style="overflow:visible;display:block">${out}</svg>`;
 }
 
 // ── Init ─────────────────────────────────────
