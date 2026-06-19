@@ -226,10 +226,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
         style="width:100%;background:#252A3A;border:1px solid #2A2F42;border-radius:8px;padding:10px 14px;font-size:13px;font-family:inherit;color:#F0F2F8;outline:none">
     </div>
     <div id="fb-msg" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;margin-bottom:10px">
       <button onclick="saveFirebaseSetup()" style="flex:1;background:#FF385C;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit">Save & Sync Now</button>
       <button onclick="closeFirebaseSetup()" style="background:#252A3A;border:1px solid #2A2F42;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;color:#A0A8C0;cursor:pointer;font-family:inherit">Cancel</button>
     </div>
+    <button onclick="pushLocalToFirebase()" style="width:100%;background:#252A3A;border:1px solid #333849;border-radius:8px;padding:9px;font-size:12px;font-weight:600;color:#00C2D4;cursor:pointer;font-family:inherit">↑ Push audits from this device to Firebase</button>
   </div>
 </div>
 
@@ -595,6 +596,29 @@ function openFirebaseSetup(){
 }
 function closeFirebaseSetup(){
   document.getElementById('fb-overlay').style.display='none';
+}
+async function pushLocalToFirebase(){
+  const url=getFirebaseUrl();
+  const msg=document.getElementById('fb-msg');
+  if(!url){msg.style.color='#FF4D6A';msg.textContent='⚠ Save a Firebase URL first.';return;}
+  const local=JSON.parse(localStorage.getItem('aircover-audits')||'[]');
+  if(!local.length){msg.style.color='#A0A8C0';msg.textContent='No local audits found on this device.';return;}
+  msg.style.color='#A0A8C0';msg.textContent=`Pushing ${local.length} audit(s) from this device…`;
+  try{
+    // Fetch current Firebase data first, then merge
+    const resp=await fetch(`${url}/audits.json`);
+    const raw=await resp.json();
+    const remote=raw?Object.values(raw):[];
+    const remoteIds=new Set(remote.map(e=>String(e.id)));
+    const localOnly=local.filter(e=>!remoteIds.has(String(e.id)));
+    if(!localOnly.length){msg.style.color='#00D4AA';msg.textContent='✓ All local audits already in Firebase.';return;}
+    const merged=[...remote,...localOnly].sort((a,b)=>a.id-b.id);
+    await save(merged);
+    msg.style.color='#00D4AA';msg.textContent=`✓ Pushed ${localOnly.length} audit(s) to Firebase successfully!`;
+    setTimeout(async()=>{closeFirebaseSetup();await syncFromFirebase();renderAll();},1000);
+  }catch(e){
+    msg.style.color='#FF4D6A';msg.textContent='✗ Failed: '+e.message;
+  }
 }
 async function saveFirebaseSetup(){
   const url=document.getElementById('fb-url-input').value.trim().replace(/\/$/,'');
