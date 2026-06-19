@@ -279,6 +279,8 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
        SECTION 1: OVERALL
   ════════════════════════════ -->
   <section class="section active" id="sec-overall">
+    <!-- Cohort summary banner -->
+    <div id="cohort-banner" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px"></div>
     <div class="sechdr" style="margin-bottom:6px">
       <h2>Cohort Average — Nesting Period</h2>
       <span class="hint" id="overall-period-hint">Avg across all weeks with data vs target</span>
@@ -359,6 +361,127 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
 // ── Colours ─────────────────────────────────
 const AV=['#E31C5F','#00A699','#FC642D'];
 
+// ── Cohort config (editable, stored in localStorage) ──
+const COHORT_KEY='nesting-cohort-config';
+function loadCohortConfig(){
+  try{return JSON.parse(localStorage.getItem(COHORT_KEY)||'{}');}catch(e){return{};}
+}
+function saveCohortConfig(field,val){
+  const c=loadCohortConfig();c[field]=val;
+  localStorage.setItem(COHORT_KEY,JSON.stringify(c));
+}
+function renderCohortBanner(){
+  const c=loadCohortConfig();
+  const weeksWithData=[1,2,3,4].filter(w=>RAW[w].some(a=>METRICS.some(m=>a[m.k]!=null)));
+  const learnerCount=RAW[1].length;
+  const period=c.period||'Jun 2 – Jun 22, 2026';
+  const learners=c.learners!=null?c.learners:learnerCount;
+  const fieldStyle='background:var(--card2);border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-size:15px;font-weight:700;color:var(--text);font-family:inherit;outline:none;width:100%;transition:border-color .15s;';
+  document.getElementById('cohort-banner').innerHTML=`
+    <div class="card card-pad" style="border-left:3px solid var(--brand)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Nesting Period <span style="font-weight:400;color:var(--muted);font-size:9px">(click to edit)</span></div>
+      <input style="${fieldStyle}" value="${period}" placeholder="e.g. Jun 2 – Jun 22, 2026"
+        onblur="saveCohortConfig('period',this.value);renderCohortBanner()"
+        onkeydown="if(event.key==='Enter')this.blur()"/>
+    </div>
+    <div class="card card-pad" style="border-left:3px solid var(--teal)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Total Learners <span style="font-weight:400;color:var(--muted);font-size:9px">(click to edit)</span></div>
+      <input type="number" min="1" style="${fieldStyle};color:var(--teal)" value="${learners}" placeholder="3"
+        onblur="saveCohortConfig('learners',parseInt(this.value)||learnerCount);renderCohortBanner()"
+        onkeydown="if(event.key==='Enter')this.blur()"/>
+    </div>
+    <div class="card card-pad" style="border-left:3px solid var(--green)">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Weeks with Data</div>
+      <div style="font-size:28px;font-weight:800;color:var(--green);letter-spacing:-.5px">${weeksWithData.length} <span style="font-size:13px;font-weight:500;color:var(--muted)">of 4</span></div>
+    </div>`;
+}
+
+// ── Google Sheets live fetch ──────────────────
+const SHEET_ID='1H4OSyF85GCihl5Z1XozrMItZAINSCEtZf_U6AA0eUkg';
+const SHEET_GID='676917693';
+// Column header → metric key mapping
+const COL_MAP={
+  'quality':['quality','quality score','qual','quality %'],
+  'fcs':['fcs','% 1st contact sla','first contact sla','1st contact sla','fcs%','% fcs'],
+  'airbnb_sla':['airbnb_sla','airbnb resp sla','airbnb response sla','airbnb sla','ab sla'],
+  'ttr':['ttr','ttr <14d','ttr <14 days','time to resolution','ttr%'],
+  'spd':['spd','sends per day','send per day'],
+  'host_appeal':['host_appeal','host appeal rate','host appeal %','host appeal'],
+  'guest_appeal':['guest_appeal','guest appeal rate','guest appeal %','guest appeal'],
+  'three_contact':['three_contact','3+ contact rate','3+ contact %','3 contact','three contact','3+contact'],
+  'nps':['nps','paid host nps','paid nps','nps score'],
+  'closed':['closed','claims closed','cases closed','claim closed'],
+  'assigned':['assigned','claims assigned','cases assigned','claim assigned'],
+};
+function mapHeader(h){
+  const lh=h.toLowerCase().trim();
+  for(const [key,variants] of Object.entries(COL_MAP)){
+    if(variants.includes(lh))return key;
+  }
+  return null;
+}
+function parseGvizTable(table){
+  const cols=table.cols.map(c=>c.label||c.id||'');
+  const nameIdx=cols.findIndex(c=>['name','agent name','agent','specialist name','specialist'].includes(c.toLowerCase().trim()));
+  const weekIdx=cols.findIndex(c=>['week','wk','week number','week #'].includes(c.toLowerCase().trim()));
+  if(nameIdx<0||weekIdx<0){console.warn('Sheet: could not find Name or Week column');return null;}
+  const metricCols=cols.map((c,i)=>({i,key:mapHeader(c)})).filter(x=>x.key&&x.i!==nameIdx&&x.i!==weekIdx);
+  const newData={1:[],2:[],3:[],4:[]};
+  table.rows.forEach(row=>{
+    const cells=row.c;
+    const nameCell=cells[nameIdx];
+    const weekCell=cells[weekIdx];
+    if(!nameCell||!weekCell)return;
+    const name=(nameCell.v||'').toString().trim();
+    const wk=parseInt(weekCell.v);
+    if(!name||isNaN(wk)||wk<1||wk>4)return;
+    const entry={name};
+    metricCols.forEach(({i,key})=>{
+      const cell=cells[i];
+      if(cell&&cell.v!=null){
+        const val=parseFloat(cell.v);
+        entry[key]=isNaN(val)?null:val;
+      } else {
+        entry[key]=null;
+      }
+    });
+    // merge into existing agent or push new
+    const existing=newData[wk].find(a=>a.name===name);
+    if(existing){Object.assign(existing,entry);}else{newData[wk].push(entry);}
+  });
+  // only replace weeks that have data
+  let updated=false;
+  [1,2,3,4].forEach(w=>{
+    if(newData[w].length>0){
+      FALLBACK[w]=newData[w];
+      RAW[w]=newData[w].map(a=>({...a}));
+      updated=true;
+    }
+  });
+  return updated;
+}
+async function fetchFromSheet(){
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${SHEET_GID}`;
+  try{
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const text=await resp.text();
+    const match=text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);
+    if(!match)throw new Error('Unexpected response format');
+    const json=JSON.parse(match[1]);
+    if(json.status==='error')throw new Error(json.errors?.[0]?.message||'Sheet error');
+    const updated=parseGvizTable(json.table);
+    if(updated){
+      applyScoreOverrides();
+      const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('last-updated').textContent='Live · '+ts;
+    }
+  }catch(e){
+    console.warn('Sheet fetch failed, using hardcoded data:',e.message);
+    document.getElementById('last-updated').textContent='Offline data';
+  }
+}
+
 // ── Targets (per nesting program spec) ───────
 const T={
   1:{quality:85,ttr:null,host_appeal:14,spd:0.5,guest_appeal:9,fcs:90,airbnb_sla:90,three_contact:28,nps:11},
@@ -420,7 +543,8 @@ function saveScoreOverride(agentName,wk,metric,rawVal){
 }
 applyScoreOverrides();
 
-function refresh(){
+async function refresh(){
+  await fetchFromSheet();
   const n=RAW[1].length||RAW[2].length||0;
   document.getElementById('tab-badge-overall').textContent=n;
   document.getElementById('tab-badge-spec').textContent=n;
@@ -522,6 +646,7 @@ function overallAvg(k){
 // SECTION 1: OVERALL
 // ═══════════════════════════════════
 function renderOverall(){
+  renderCohortBanner();
   const weeksWithData=[1,2,3,4].filter(w=>RAW[w].some(a=>METRICS.some(m=>a[m.k]!=null)));
   const wLabel=weeksWithData.length===0?'No data yet':
     weeksWithData.length===1?`Week ${weeksWithData[0]} only`:
@@ -917,7 +1042,7 @@ function renderMetricAudit(){
 }
 
 // ── Init ─────────────────────────────────────
-refresh();
+refresh(); // calls fetchFromSheet, then renders all tabs
 </script>
 </body>
 </html>
