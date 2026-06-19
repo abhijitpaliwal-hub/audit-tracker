@@ -200,7 +200,37 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
     <div class="hdr-sep"></div>
     <span class="hdr-sub">Nesting — June 2026</span>
   </div>
-  <div class="hdr-pill" id="hdr-count">0 audits logged</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="sync-status" style="font-size:11px"></span>
+    <div class="hdr-pill" id="hdr-count">0 audits logged</div>
+    <button onclick="openFirebaseSetup()" title="Configure shared sync" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit">⚙ Sync</button>
+  </div>
+</div>
+
+<!-- FIREBASE SETUP MODAL -->
+<div id="fb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:600;align-items:center;justify-content:center">
+  <div style="background:#1E2130;border:1px solid #2A2F42;border-radius:16px;padding:32px;width:480px;max-width:95vw;box-shadow:0 16px 48px rgba(0,0,0,.6)">
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">⚙ Configure Shared Sync</div>
+    <p style="font-size:13px;color:#A0A8C0;margin-bottom:20px;line-height:1.6">
+      Enter your Firebase Realtime Database URL to sync audits across all team members in real time.<br><br>
+      <strong style="color:#F0F2F8">Setup (free, 2 mins):</strong><br>
+      1. Go to <span style="color:#00C2D4">console.firebase.google.com</span><br>
+      2. Create a project → Build → Realtime Database → Create database<br>
+      3. Choose <em>Start in test mode</em> → click Enable<br>
+      4. Copy the URL shown (e.g. <code style="color:#FF385C">https://your-app-default-rtdb.firebaseio.com</code>)<br>
+      5. Paste it below and click Save
+    </p>
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;font-weight:700;color:#606880;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Firebase Database URL</label>
+      <input id="fb-url-input" type="url" placeholder="https://your-project-default-rtdb.firebaseio.com"
+        style="width:100%;background:#252A3A;border:1px solid #2A2F42;border-radius:8px;padding:10px 14px;font-size:13px;font-family:inherit;color:#F0F2F8;outline:none">
+    </div>
+    <div id="fb-msg" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveFirebaseSetup()" style="flex:1;background:#FF385C;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit">Save & Sync Now</button>
+      <button onclick="closeFirebaseSetup()" style="background:#252A3A;border:1px solid #2A2F42;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;color:#A0A8C0;cursor:pointer;font-family:inherit">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- TABS -->
@@ -444,9 +474,125 @@ const CRITERIA=[
 const RESULT_LABELS={pass:'Pass',part:'Partial Pass',fail:'Fail'};
 const FOLLOWUP_LABELS={no:'None',coaching:'Coaching',reaudit:'Re-audit',escalate:'Escalate'};
 
-// ── Storage ────────────────────────────────────────
-function load(){return JSON.parse(localStorage.getItem('aircover-audits')||'[]');}
-function save(data){localStorage.setItem('aircover-audits',JSON.stringify(data));}
+// ── Firebase config ────────────────────────────────
+// Set your Firebase Realtime Database URL below (leave empty to use local storage only)
+const FIREBASE_CFG_KEY='audit-firebase-url';
+function getFirebaseUrl(){return localStorage.getItem(FIREBASE_CFG_KEY)||'';}
+function setFirebaseUrl(url){localStorage.setItem(FIREBASE_CFG_KEY,url.trim().replace(/\/$/,''));}
+
+// ── In-memory DB (all functions read from this) ────
+let DB=[];
+
+function load(){return DB;}
+
+async function save(data){
+  DB=data;
+  // Always keep a local backup
+  try{localStorage.setItem('aircover-audits',JSON.stringify(data));}catch(e){}
+  // Push to Firebase
+  const url=getFirebaseUrl();
+  if(!url)return;
+  // Convert array to object keyed by id for safe concurrent writes
+  const obj={};
+  data.forEach(e=>obj[e.id]=e);
+  try{
+    await fetch(`${url}/audits.json`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(obj)
+    });
+    setSyncStatus('synced');
+  }catch(e){
+    setSyncStatus('error');
+  }
+}
+
+async function syncFromFirebase(){
+  const url=getFirebaseUrl();
+  if(!url){
+    // Fall back to localStorage
+    DB=JSON.parse(localStorage.getItem('aircover-audits')||'[]');
+    return;
+  }
+  setSyncStatus('syncing');
+  try{
+    const resp=await fetch(`${url}/audits.json`);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const raw=await resp.json();
+    if(raw===null){DB=[];}
+    else{
+      DB=Object.values(raw).sort((a,b)=>a.id-b.id);
+      // also update local backup
+      try{localStorage.setItem('aircover-audits',JSON.stringify(DB));}catch(e){}
+    }
+    setSyncStatus('synced');
+    renderAll();
+  }catch(e){
+    console.warn('Firebase sync failed:',e.message);
+    // Fall back to localStorage
+    DB=JSON.parse(localStorage.getItem('aircover-audits')||'[]');
+    setSyncStatus('error');
+    renderAll();
+  }
+}
+
+function setSyncStatus(st){
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  const url=getFirebaseUrl();
+  if(!url){el.innerHTML='<span style="color:rgba(255,255,255,.5)">Local only</span>';return;}
+  if(st==='syncing')el.innerHTML='<span style="color:rgba(255,255,255,.7)">↻ Syncing…</span>';
+  else if(st==='synced'){
+    const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    el.innerHTML=`<span style="color:rgba(255,255,255,.9)">● Live · ${ts}</span>`;
+  }
+  else if(st==='error')el.innerHTML='<span style="color:#FF4D6A">⚠ Sync error</span>';
+}
+
+function renderAll(){
+  updateHdrCount();
+  renderOverview();
+  const activeSection=document.querySelector('.section.active');
+  if(activeSection){
+    const id=activeSection.id.replace('sec-','');
+    if(id==='history')renderHistory();
+    if(id==='summary')renderAgentSummary();
+    if(id==='detail')renderAgentDetail(document.getElementById('detail-agent-name')?.textContent);
+  }
+}
+
+// Auto-sync every 30 seconds
+setInterval(()=>syncFromFirebase(),30000);
+
+// ── Firebase setup modal ───────────────────────────
+function openFirebaseSetup(){
+  document.getElementById('fb-url-input').value=getFirebaseUrl();
+  document.getElementById('fb-msg').textContent='';
+  const ov=document.getElementById('fb-overlay');
+  ov.style.display='flex';
+}
+function closeFirebaseSetup(){
+  document.getElementById('fb-overlay').style.display='none';
+}
+async function saveFirebaseSetup(){
+  const url=document.getElementById('fb-url-input').value.trim().replace(/\/$/,'');
+  const msg=document.getElementById('fb-msg');
+  if(!url){setFirebaseUrl('');msg.style.color='#A0A8C0';msg.textContent='Cleared — using local storage only.';setTimeout(closeFirebaseSetup,1500);return;}
+  msg.style.color='#A0A8C0';msg.textContent='Testing connection…';
+  try{
+    const resp=await fetch(`${url}/audits.json`);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    setFirebaseUrl(url);
+    msg.style.color='#00D4AA';msg.textContent='✓ Connected! Syncing data…';
+    setTimeout(async()=>{
+      closeFirebaseSetup();
+      await syncFromFirebase();
+      renderAll();
+    },800);
+  }catch(e){
+    msg.style.color='#FF4D6A';msg.textContent='✗ Could not connect: '+e.message+'. Check the URL and make sure test mode is enabled.';
+  }
+}
 
 let editingId=null;
 
@@ -519,7 +665,7 @@ function updateScore(){
   breakdown.textContent=answered+' of '+CRITERIA.length+' criteria scored'+(critFail.length?' · ⚠ Critical fail: '+critFail.slice(0,2).join(', '):'');
 }
 
-function submitAudit(){
+async function submitAudit(){
   const agent=document.getElementById('f-agent').value;
   const week=document.getElementById('f-week').value;
   const caseId=document.getElementById('f-caseid').value.trim();
@@ -566,7 +712,7 @@ function submitAudit(){
     all.push(entry);
     msg.textContent='✓ Audit saved — '+agent+' · Case '+caseId+' (Score: '+pct+'%)';
   }
-  save(all);
+  await save(all);
   msg.style.color='var(--green)';msg.style.display='block';
   resetForm();
   updateHdrCount();
@@ -661,10 +807,10 @@ function renderHistory(){
   }).join('');
 }
 
-function deleteAudit(ev,id){
+async function deleteAudit(ev,id){
   ev.stopPropagation();
   if(!confirm('Delete this audit?'))return;
-  save(load().filter(a=>a.id!==id));
+  await save(load().filter(a=>a.id!==id));
   renderHistory();renderOverview();renderAgentSummary();updateHdrCount();
 }
 
@@ -965,8 +1111,7 @@ function updateHdrCount(){
 // ── Boot ───────────────────────────────────────────
 buildCriteriaForm();
 document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
-updateHdrCount();
-renderOverview();
+syncFromFirebase();
 </script>
 </body>
 </html>
