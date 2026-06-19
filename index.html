@@ -251,7 +251,6 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="hdr-pill"><span id="hdr-meta">June 2026 Cohort · 4 Weeks · Jun 17, 2026</span></div>
-    <span id="last-updated" style="font-size:11px;color:rgba(255,255,255,.6)"></span>
     <button onclick="refresh()" style="padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);font-size:12px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px)">↻ Refresh</button>
   </div>
 </div>
@@ -396,108 +395,7 @@ function renderCohortBanner(){
     </div>`;
 }
 
-// ── Google Sheets live fetch ──────────────────
-const SHEET_ID='1H4OSyF85GCihl5Z1XozrMItZAINSCEtZf_U6AA0eUkg';
-const SHEET_GID='676917693';
-// Column header → metric key mapping
-const COL_MAP={
-  'quality':['quality','quality score','qual','quality %'],
-  'fcs':['fcs','% 1st contact sla','first contact sla','1st contact sla','fcs%','% fcs'],
-  'airbnb_sla':['airbnb_sla','airbnb resp sla','airbnb response sla','airbnb sla','ab sla'],
-  'ttr':['ttr','ttr <14d','ttr <14 days','time to resolution','ttr%'],
-  'spd':['spd','sends per day','send per day'],
-  'host_appeal':['host_appeal','host appeal rate','host appeal %','host appeal'],
-  'guest_appeal':['guest_appeal','guest appeal rate','guest appeal %','guest appeal'],
-  'three_contact':['three_contact','3+ contact rate','3+ contact %','3 contact','three contact','3+contact'],
-  'nps':['nps','paid host nps','paid nps','nps score'],
-  'closed':['closed','claims closed','cases closed','claim closed'],
-  'assigned':['assigned','claims assigned','cases assigned','claim assigned'],
-};
-function mapHeader(h){
-  const lh=h.toLowerCase().trim();
-  for(const [key,variants] of Object.entries(COL_MAP)){
-    if(variants.includes(lh))return key;
-  }
-  return null;
-}
-function parseGvizTable(table){
-  const cols=table.cols.map(c=>c.label||c.id||'');
-  const nameIdx=cols.findIndex(c=>['name','agent name','agent','specialist name','specialist'].includes(c.toLowerCase().trim()));
-  const weekIdx=cols.findIndex(c=>['week','wk','week number','week #'].includes(c.toLowerCase().trim()));
-  if(nameIdx<0||weekIdx<0){console.warn('Sheet: could not find Name or Week column');return null;}
-  const metricCols=cols.map((c,i)=>({i,key:mapHeader(c)})).filter(x=>x.key&&x.i!==nameIdx&&x.i!==weekIdx);
-  const newData={1:[],2:[],3:[],4:[]};
-  table.rows.forEach(row=>{
-    const cells=row.c;
-    const nameCell=cells[nameIdx];
-    const weekCell=cells[weekIdx];
-    if(!nameCell||!weekCell)return;
-    const name=(nameCell.v||'').toString().trim();
-    const wk=parseInt(weekCell.v);
-    if(!name||isNaN(wk)||wk<1||wk>4)return;
-    const entry={name};
-    metricCols.forEach(({i,key})=>{
-      const cell=cells[i];
-      if(cell&&cell.v!=null){
-        const val=parseFloat(cell.v);
-        entry[key]=isNaN(val)?null:val;
-      } else {
-        entry[key]=null;
-      }
-    });
-    // merge into existing agent or push new
-    const existing=newData[wk].find(a=>a.name===name);
-    if(existing){Object.assign(existing,entry);}else{newData[wk].push(entry);}
-  });
-  // only replace weeks that have data
-  let updated=false;
-  [1,2,3,4].forEach(w=>{
-    if(newData[w].length>0){
-      FALLBACK[w]=newData[w];
-      RAW[w]=newData[w].map(a=>({...a}));
-      updated=true;
-    }
-  });
-  return updated;
-}
-function fetchFromSheet(){
-  return new Promise(resolve=>{
-    const cbName='_gvizCb_'+Date.now();
-    const timeout=setTimeout(()=>{
-      cleanup();
-      console.warn('Sheet fetch timed out, using hardcoded data');
-      document.getElementById('last-updated').textContent='Offline data';
-      resolve();
-    },8000);
-    function cleanup(){
-      delete window[cbName];
-      const old=document.getElementById('_gviz_script');
-      if(old)old.remove();
-      clearTimeout(timeout);
-    }
-    window[cbName]=function(json){
-      cleanup();
-      try{
-        if(json.status==='error')throw new Error(json.errors?.[0]?.message||'Sheet error');
-        const updated=parseGvizTable(json.table);
-        if(updated){
-          applyScoreOverrides();
-          const ts=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-          document.getElementById('last-updated').textContent='Live · '+ts;
-        }
-      }catch(e){
-        console.warn('Sheet parse failed:',e.message);
-        document.getElementById('last-updated').textContent='Offline data';
-      }
-      resolve();
-    };
-    const s=document.createElement('script');
-    s.id='_gviz_script';
-    s.src=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;handler=${cbName}&gid=${SHEET_GID}`;
-    s.onerror=()=>{cleanup();console.warn('Sheet script load failed');document.getElementById('last-updated').textContent='Offline data';resolve();};
-    document.head.appendChild(s);
-  });
-}
+function fetchFromSheet(){return Promise.resolve();}
 
 // ── Targets (per nesting program spec) ───────
 const T={
@@ -560,8 +458,7 @@ function saveScoreOverride(agentName,wk,metric,rawVal){
 }
 applyScoreOverrides();
 
-async function refresh(){
-  await fetchFromSheet();
+function refresh(){
   const n=RAW[1].length||RAW[2].length||0;
   document.getElementById('tab-badge-overall').textContent=n;
   document.getElementById('tab-badge-spec').textContent=n;
@@ -1059,7 +956,7 @@ function renderMetricAudit(){
 }
 
 // ── Init ─────────────────────────────────────
-refresh(); // calls fetchFromSheet, then renders all tabs
+refresh();
 </script>
 </body>
 </html>
