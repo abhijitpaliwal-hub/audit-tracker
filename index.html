@@ -476,7 +476,33 @@ const FALLBACK={
 };
 
 // ── Raw data — live from Google Sheets, fallback above ────────
-let RAW={1:[...FALLBACK[1]],2:[...FALLBACK[2]],3:[...FALLBACK[3]],4:[...FALLBACK[4]]};
+let RAW={1:FALLBACK[1].map(a=>({...a})),2:FALLBACK[2].map(a=>({...a})),3:FALLBACK[3].map(a=>({...a})),4:FALLBACK[4].map(a=>({...a}))};
+
+// ── Score overrides (localStorage) ───────────
+const SCORE_KEY='nesting-metric-scores';
+function loadScoreOverrides(){try{return JSON.parse(localStorage.getItem(SCORE_KEY)||'{}');}catch(e){return{};}}
+function applyScoreOverrides(){
+  const ov=loadScoreOverrides();
+  Object.keys(ov).forEach(k=>{
+    const [name,wk,metric]=k.split('__');
+    const wkData=RAW[parseInt(wk)];
+    if(!wkData)return;
+    const agent=wkData.find(a=>a.name===name);
+    if(agent)agent[metric]=ov[k];
+  });
+}
+function saveScoreOverride(agentName,wk,metric,rawVal){
+  const ov=loadScoreOverrides();
+  const k=`${agentName}__${wk}__${metric}`;
+  const num=rawVal===''?null:parseFloat(rawVal);
+  if(num===null||isNaN(num))delete ov[k];else ov[k]=num;
+  localStorage.setItem(SCORE_KEY,JSON.stringify(ov));
+  // Reset RAW to FALLBACK then reapply all overrides
+  [1,2,3,4].forEach(w=>{RAW[w]=FALLBACK[w].map(a=>({...a}));});
+  applyScoreOverrides();
+  renderOverall();renderWbw();renderSpecialist();renderMetricAudit();
+}
+applyScoreOverrides();
 
 function refresh(){
   const n=RAW[1].length||RAW[2].length||0;
@@ -997,77 +1023,95 @@ function loadAuditNotes(){try{return JSON.parse(localStorage.getItem(AUDIT_KEY)|
 function saveAuditNote(agent,wk,metric,field,value){
   const all=loadAuditNotes();
   const k=`${agent}__${wk}__${metric}`;
-  all[k]=all[k]||{};
-  all[k][field]=value;
+  all[k]=all[k]||{};all[k][field]=value;
   localStorage.setItem(AUDIT_KEY,JSON.stringify(all));
 }
 
 const AUDIT_METRICS=[
-  {k:'quality',    lbl:'Quality',            inv:false,sfx:'%'},
-  {k:'fcs',        lbl:'% First Contact SLA',inv:false,sfx:'%'},
-  {k:'airbnb_sla', lbl:'Airbnb Resp SLA',    inv:false,sfx:'%'},
-  {k:'ttr',        lbl:'TTR <14d',           inv:false,sfx:'%'},
-  {k:'spd',        lbl:'SPD',               inv:false,sfx:''},
-  {k:'host_appeal',lbl:'Host Appeal Rate',   inv:true, sfx:'%'},
-  {k:'guest_appeal',lbl:'Guest Appeal Rate', inv:true, sfx:'%'},
-  {k:'three_contact',lbl:'3+ Contact Rate',  inv:true, sfx:'%'},
-  {k:'nps',        lbl:'Paid Host NPS',      inv:false,sfx:''},
+  {k:'quality',      lbl:'Quality',            inv:false,sfx:'%', ph:'e.g. 87.5'},
+  {k:'fcs',          lbl:'% First Contact SLA',inv:false,sfx:'%', ph:'e.g. 78.0'},
+  {k:'airbnb_sla',   lbl:'Airbnb Resp SLA',    inv:false,sfx:'%', ph:'e.g. 94.7'},
+  {k:'ttr',          lbl:'TTR <14d',           inv:false,sfx:'%', ph:'e.g. 100'},
+  {k:'spd',          lbl:'SPD',                inv:false,sfx:'',  ph:'e.g. 1.2'},
+  {k:'host_appeal',  lbl:'Host Appeal Rate',   inv:true, sfx:'%', ph:'e.g. 33.3'},
+  {k:'guest_appeal', lbl:'Guest Appeal Rate',  inv:true, sfx:'%', ph:'e.g. 0'},
+  {k:'three_contact',lbl:'3+ Contact Rate',    inv:true, sfx:'%', ph:'e.g. 20'},
+  {k:'nps',          lbl:'Paid Host NPS',      inv:false,sfx:'',  ph:'e.g. 26'},
 ];
 const WK_DATES={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22'};
 
 function renderMetricAudit(){
   const notes=loadAuditNotes();
   const agents=RAW[1].map(a=>a.name);
-  document.getElementById('metric-audit-body').innerHTML=agents.map((name,idx)=>{
-    const color=AV[idx%AV.length];
+  document.getElementById('metric-audit-body').innerHTML=agents.map((name,agIdx)=>{
+    const color=AV[agIdx%AV.length];
     const init=name.split(' ').map(n=>n[0]).join('').slice(0,2);
     const weekBlocks=[1,2,3].map(wk=>{
-      const a=RAW[wk]&&RAW[wk][idx];
+      const a=RAW[wk]&&RAW[wk][agIdx];
       const t=T[wk];
-      const hasData=a&&AUDIT_METRICS.some(m=>a[m.k]!=null);
-      if(!hasData) return`<div class="audit-wk-block">
-        <div class="audit-wk-hdr">Week ${wk} <span style="color:var(--muted);font-size:10px;font-weight:500">${WK_DATES[wk]}</span><span style="color:var(--muted);font-size:11px;margin-left:auto">No data yet</span></div>
-      </div>`;
-      const missed=AUDIT_METRICS.filter(m=>{
-        const val=a[m.k],tgt=t[m.k];
+      const missedCount=AUDIT_METRICS.filter(m=>{
+        const val=a?a[m.k]:null,tgt=t[m.k];
         if(val==null||tgt==null)return false;
         return m.inv?val>tgt:val<tgt;
-      });
-      const statusHtml=missed.length===0
-        ?`<span style="color:var(--green);font-size:11px;margin-left:auto">✓ All metrics on target</span>`
-        :`<span style="color:var(--red);font-size:11px;margin-left:auto">${missed.length} metric${missed.length>1?'s':''} below target</span>`;
-      const tableHtml=missed.length===0?'':`
-        <table class="audit-tbl">
-          <thead><tr>
-            <th>Metric</th>
-            <th class="center">Score</th>
-            <th class="center">Target</th>
-            <th style="min-width:160px">Cases</th>
-            <th style="min-width:220px">Reason</th>
-          </tr></thead>
-          <tbody>${missed.map(m=>{
-            const val=a[m.k],tgt=t[m.k];
-            const nk=`${name}__${wk}__${m.k}`;
-            const note=notes[nk]||{};
-            const tgtTxt=(m.inv?'≤':'≥')+tgt+(m.sfx);
-            return`<tr>
-              <td style="font-weight:600">${m.lbl}</td>
-              <td style="text-align:center"><span style="font-weight:700;color:var(--red)">${val}${m.sfx}</span></td>
-              <td style="text-align:center;color:var(--muted)">${tgtTxt}</td>
-              <td><input class="audit-input" placeholder="e.g. CS-12345, CS-67890" value="${(note.cases||'').replace(/"/g,'&quot;')}" oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value)"/></td>
-              <td><input class="audit-input" placeholder="Add reason for missing target…" value="${(note.reason||'').replace(/"/g,'&quot;')}" oninput="saveAuditNote('${name}',${wk},'${m.k}','reason',this.value)"/></td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table>`;
+      }).length;
+      const statusHtml=missedCount===0
+        ?`<span style="color:var(--green);font-size:11px;margin-left:auto">✓ All entered metrics on target</span>`
+        :`<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:auto">${missedCount} metric${missedCount>1?'s':''} below target</span>`;
+      const rows=AUDIT_METRICS.map(m=>{
+        const val=a?a[m.k]:null;
+        const tgt=t[m.k];
+        const nk=`${name}__${wk}__${m.k}`;
+        const note=notes[nk]||{};
+        const missed=val!=null&&tgt!=null&&(m.inv?val>tgt:val<tgt);
+        const onTarget=val!=null&&tgt!=null&&!missed;
+        const noTgt=tgt==null;
+        const rowBg=missed?'background:rgba(255,77,106,.06);':onTarget?'background:rgba(0,212,170,.04);':'';
+        const statusCell=val==null?`<span style="color:var(--muted);font-size:11px">—</span>`
+          :noTgt?`<span style="color:var(--muted);font-size:11px">N/A</span>`
+          :missed?`<span style="color:var(--red);font-weight:700">✗ Below</span>`
+          :`<span style="color:var(--green);font-weight:700">✓ Met</span>`;
+        const tgtTxt=tgt==null?'N/A this week':(m.inv?'≤':'≥')+tgt+m.sfx;
+        const scoreVal=val!=null?val:'';
+        return`<tr style="${rowBg}">
+          <td style="font-weight:600;font-size:13px">${m.lbl}</td>
+          <td style="text-align:center;min-width:120px">
+            <input class="audit-input" style="text-align:center;width:100px;color:${missed?'var(--red)':onTarget?'var(--green)':'var(--text)'};font-weight:${val!=null?'700':'400'}"
+              placeholder="${m.ph}" value="${scoreVal}"
+              onblur="saveScoreOverride('${name}',${wk},'${m.k}',this.value)"
+              onkeydown="if(event.key==='Enter')this.blur()"/>
+          </td>
+          <td style="text-align:center;color:var(--muted);font-size:12px">${tgtTxt}</td>
+          <td style="text-align:center">${statusCell}</td>
+          <td><input class="audit-input" placeholder="${missed?'Case IDs (e.g. CS-12345)':'—'}" value="${(note.cases||'').replace(/"/g,'&quot;')}" ${!missed&&!note.cases?'style="opacity:.4"':''} oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value)"/></td>
+          <td><input class="audit-input" placeholder="${missed?'Reason for missing target…':'—'}" value="${(note.reason||'').replace(/"/g,'&quot;')}" ${!missed&&!note.reason?'style="opacity:.4"':''} oninput="saveAuditNote('${name}',${wk},'${m.k}','reason',this.value)"/></td>
+        </tr>`;
+      }).join('');
       return`<div class="audit-wk-block">
-        <div class="audit-wk-hdr">Week ${wk} <span style="color:var(--muted);font-size:10px;font-weight:500">${WK_DATES[wk]}</span>${statusHtml}</div>
-        ${tableHtml}
+        <div class="audit-wk-hdr">
+          Week ${wk}
+          <span style="color:var(--muted);font-size:10px;font-weight:500">${WK_DATES[wk]}</span>
+          ${statusHtml}
+        </div>
+        <div style="overflow-x:auto">
+          <table class="audit-tbl">
+            <thead><tr>
+              <th style="min-width:150px">Metric</th>
+              <th class="center" style="min-width:110px">Score <span style="font-weight:400;text-transform:none;font-size:9px">(editable)</span></th>
+              <th class="center">Target</th>
+              <th class="center">Status</th>
+              <th style="min-width:170px">Cases</th>
+              <th style="min-width:220px">Reason</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
       </div>`;
     }).join('');
     return`<div class="audit-agent-card">
       <div class="audit-agent-hdr">
         <div class="avatar" style="background:${color};width:36px;height:36px;font-size:13px">${init}</div>
         <div style="font-size:15px;font-weight:700">${name}</div>
+        <span style="font-size:11px;color:var(--muted);margin-left:8px">Click any Score cell to edit · press Enter or click away to save</span>
       </div>
       <div class="audit-agent-body">${weekBlocks}</div>
     </div>`;
