@@ -369,7 +369,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
     <div style="overflow-x:auto">
       <table class="log-table">
         <thead><tr>
-          <th>Agent</th><th>Week</th><th>Case ID</th><th>Date</th>
+          <th>Agent</th><th>Week</th><th>Case ID</th><th>Date</th><th>Auditor</th>
           <th>Score</th><th>Result</th><th>Follow-up</th><th></th>
         </tr></thead>
         <tbody id="history-body"></tbody>
@@ -404,7 +404,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
       <div style="overflow-x:auto">
         <table class="log-table">
           <thead><tr>
-            <th>Week</th><th>Case ID</th><th>Date</th><th>Score</th><th>Result</th><th>Follow-up</th><th></th>
+            <th>Week</th><th>Case ID</th><th>Date</th><th>Auditor</th><th>Score</th><th>Result</th><th>Follow-up</th><th></th>
           </tr></thead>
           <tbody id="detail-history-body"></tbody>
         </table>
@@ -649,6 +649,7 @@ function renderHistory(){
       <td><span class="wk-chip">Wk ${e.week}</span></td>
       <td style="font-weight:600;font-family:monospace;color:var(--teal)">${e.caseId}</td>
       <td style="color:var(--sub)">${e.date}</td>
+      <td style="color:var(--sub)">${e.auditor||'—'}</td>
       <td style="font-weight:700;color:${e.score>=80?'var(--green)':e.score>=60?'var(--yellow)':'var(--red)'}">${e.score!=null?e.score+'%':'—'}</td>
       <td><span class="score-badge ${v.cls}">${v.label}</span></td>
       <td style="font-size:12px;color:${e.followup!=='no'?'var(--yellow)':'var(--sub)'}">${fu}</td>
@@ -811,6 +812,7 @@ function renderDetailTable(ag,wk){
       <td><span class="wk-chip">Wk ${e.week}</span></td>
       <td style="font-weight:600;font-family:monospace;color:var(--teal)">${e.caseId}</td>
       <td style="color:var(--sub)">${e.date}</td>
+      <td style="color:var(--sub)">${e.auditor||'—'}</td>
       <td style="font-weight:700;color:${e.score>=80?'var(--green)':e.score>=60?'var(--yellow)':'var(--red)'}">${e.score!=null?e.score+'%':'—'}</td>
       <td><span class="score-badge ${v.cls}">${v.label}</span></td>
       <td style="font-size:12px;color:${e.followup!=='no'?'var(--yellow)':'var(--sub)'}">${fu}</td>
@@ -819,7 +821,7 @@ function renderDetailTable(ag,wk){
         <button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="deleteAudit(event,${e.id})">✕</button>
       </td>
     </tr>`;
-  }).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">No audits for this period</td></tr>`;
+  }).join(''):`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">No audits for this period</td></tr>`;
 }
 
 function renderDetailCriteria(ag,wk){
