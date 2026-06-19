@@ -269,17 +269,6 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
   </button>
 </div>
 
-<!-- ═══ WEEK NAV (Week by Week only) ═══ -->
-<div class="week-nav" id="week-nav" style="display:none">
-  <span class="week-nav-label">Viewing</span>
-  <div class="week-tabs">
-    <button class="week-tab active" onclick="setWbwWeek(this,1)">Week 1</button>
-    <button class="week-tab" onclick="setWbwWeek(this,2)">Week 2</button>
-    <button class="week-tab" onclick="setWbwWeek(this,3)">Week 3</button>
-    <button class="week-tab" onclick="setWbwWeek(this,4)">Week 4</button>
-  </div>
-</div>
-
 <!-- ═══ MAIN ═══ -->
 <div class="main">
 
@@ -287,92 +276,25 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
        SECTION 1: OVERALL
   ════════════════════════════ -->
   <section class="section active" id="sec-overall">
-    <div class="cards-row" id="overall-cards"></div>
-
-    <div class="two-col" style="margin-bottom:28px">
-      <div class="card card-pad">
-        <div class="sechdr" style="margin-bottom:14px">
-          <h2>At-Risk Agents</h2>
-          <span class="hint" id="risk-hint">score below 65% · latest week</span>
-        </div>
-        <div id="overall-risk"></div>
-      </div>
-      <div class="card card-pad">
-        <div class="sechdr" style="margin-bottom:14px">
-          <h2>Agent vs Target</h2>
-          <span class="hint" id="cohort-avg-hint">latest week · each agent vs target</span>
-        </div>
-        <div id="overall-metric-grid"></div>
-      </div>
+    <div class="sechdr" style="margin-bottom:6px">
+      <h2>Cohort Average — Nesting Period</h2>
+      <span class="hint" id="overall-period-hint">Avg across all weeks with data vs target</span>
     </div>
-
-    <div class="sechdr">
-      <h2>Full Leaderboard</h2>
-      <span class="hint" id="leaderboard-hint">Latest week score · Click row for detail</span>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="tbl-wrap">
-        <table id="overall-table">
-          <thead><tr>
-            <th style="width:44px">#</th>
-            <th>Agent</th>
-            <th style="text-align:center" title="Cumulative composite score">Score</th>
-            <th title="QA assessment ≥85%">Quality</th>
-            <th title="TTR within 14 days">TTR &lt;14d</th>
-            <th title="First contact SLA ≥90%">1st Cntct SLA</th>
-            <th title="Airbnb resp SLA ≥90%">Airbnb Resp SLA</th>
-            <th title="Host appeal ≤14%">Host Appeal</th>
-            <th title="Guest appeal ≤9%">Guest Appeal</th>
-            <th title="3+ contact ≤24%">3+ Contact</th>
-            <th title="SPD ≥1.2">SPD</th>
-            <th title="Paid Host NPS ≥26">Paid Host NPS</th>
-            <th>Claims Closed</th>
-            <th>Assigned</th>
-            <th style="text-align:center">Wk1→4 Trend</th>
-          </tr></thead>
-          <tbody id="overall-tbody"></tbody>
-        </table>
-      </div>
-    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Each card shows the cohort average for that metric across all weeks with data, compared against the target.</p>
+    <div id="overall-metrics-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
   </section>
 
   <!-- ════════════════════════════
        SECTION 2: WEEK BY WEEK
   ════════════════════════════ -->
   <section class="section" id="sec-wbw">
-
-    <!-- 4 week summary cards -->
-    <div class="week-sum-row" id="wbw-week-cards"></div>
-
-    <!-- Cohort trend + week stats side by side -->
-    <div class="wbw-grid">
-      <div class="card trend-card">
-        <div class="chart-lbl">Cohort Average Score — Week by Week</div>
-        <svg id="cohort-trend-svg" width="100%" height="160" viewBox="0 0 460 160" preserveAspectRatio="none"></svg>
-      </div>
-      <div class="card card-pad">
-        <div class="chart-lbl" style="margin-bottom:12px">Week <span id="wbw-wk-label">1</span> — Cohort Stats</div>
-        <div class="metric-grid" id="wbw-cohort-grid"></div>
-      </div>
+    <div class="sechdr" style="margin-bottom:16px">
+      <h2>Team Performance — Week by Week</h2>
+      <span class="hint">Cohort average per metric · color = vs that week's target</span>
     </div>
-
-    <!-- Metric vs target comparison table -->
-    <div class="sechdr">
-      <h2>Metric vs Target — All Weeks</h2>
-      <span class="hint">Cohort average · Color = vs that week's target</span>
-    </div>
-    <div class="card wbw-compare" style="margin-bottom:0">
-      <div class="wbw-tbl-wrap">
-        <table class="wbw-table">
-          <thead><tr>
-            <th style="min-width:160px">Metric</th>
-            <th class="wk-header">Week 1</th>
-            <th class="wk-header">Week 2</th>
-            <th class="wk-header">Week 3</th>
-            <th class="wk-header">Week 4</th>
-          </tr></thead>
-          <tbody id="wbw-compare-body"></tbody>
-        </table>
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px" id="wbw-table"></table>
       </div>
     </div>
   </section>
@@ -381,20 +303,11 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
        SECTION 3: SPECIALIST
   ════════════════════════════ -->
   <section class="section" id="sec-specialist">
-    <div class="cards-row" id="spec-cards"></div>
-    <div class="sechdr">
-      <h2>All Specialists</h2>
-      <span class="hint">Ranked by latest week score · Click card for detail</span>
+    <div class="sechdr" style="margin-bottom:16px">
+      <h2>Specialist Performance — Weekly Breakdown</h2>
+      <span class="hint">Per specialist · metric values vs weekly target</span>
     </div>
-    <div class="spec-grid" id="spec-grid"></div>
-    <div style="margin-top:24px">
-      <div class="sechdr">
-        <h2>All Agents — Metric Comparison</h2>
-        <span class="hint">Agent bars vs target line · select week</span>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px" id="spec-wk-filters"></div>
-      <div class="card card-pad"><div id="spec-comp-chart"></div></div>
-    </div>
+    <div id="spec-body"></div>
   </section>
 
   <!-- ════════════════════════════
@@ -573,252 +486,135 @@ function latestWeek(){
 // ═══════════════════════════════════
 // SECTION 1: OVERALL
 // ═══════════════════════════════════
-function renderOverall(){
-  const lw=latestWeek();
-  const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
-  const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
-  const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
-  const t=T[lw];
-  // 3 KPI cards — no avg score card
-  const cardsEl=document.getElementById('overall-cards');
-  cardsEl.style.gridTemplateColumns='repeat(3,1fr)';
-  cardsEl.innerHTML=`
-    <div class="sc c0"><div class="sc-icon blue">👥</div><div class="sc-label">Agents in Nesting</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
-    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">agents ≥80% this week</div></div>
-    <div class="sc c3"><div class="sc-icon red">⚠️</div><div class="sc-label">At Risk</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">agents below 65%</div></div>`;
-  // Risk list
-  const risky=data.filter(a=>{const s=sc(a,lw);return s!=null&&s<65;}).sort((a,b)=>sc(a,lw)-sc(b,lw));
-  document.getElementById('overall-risk').innerHTML=risky.length===0
-    ?`<div class="empty-ok">✓ No agents at risk this week</div>`
-    :risky.map(a=>{
-      const s=sc(a,lw),idx=RAW[lw].findIndex(x=>x.name===a.name);
-      const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
-      const issues=[];
-      if(a.quality!=null&&a.quality<t.quality)issues.push('Quality');
-      if(a.host_appeal!=null&&a.host_appeal>t.host_appeal)issues.push('Host Appeal');
-      if(a.guest_appeal!=null&&a.guest_appeal>t.guest_appeal)issues.push('Guest Appeal');
-      if(a.three_contact!=null&&a.three_contact>t.three_contact)issues.push('3+ Contact');
-      if(a.fcs!=null&&a.fcs<t.fcs)issues.push('1st Cntct SLA');
-      if(a.nps!=null&&a.nps<t.nps)issues.push('NPS');
-      const tag=s<55?'red':'yellow';
-      return`<div class="risk-item">
-        <div style="position:relative">
-          <div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div>
-          <div class="risk-dot ${tag}"></div>
-        </div>
-        <div style="flex:1"><div class="risk-name">${a.name}</div><div class="risk-issue">${issues.slice(0,4).join(' · ')||'Multiple metrics'}</div></div>
-        <span class="risk-tag ${tag}">${s}%</span>
-      </div>`;
-    }).join('');
-  // Agent vs Target chart (replaces metric grid)
-  drawAgentVsTargetChart('overall-metric-grid',lw);
-  // Table — Score = overall avg across all weeks with data
-  document.getElementById('leaderboard-hint').textContent='Overall avg score (all weeks) · Click row for detail';
-  document.getElementById('overall-tbody').innerHTML=data.map((a,i)=>{
-    const weekScores=[1,2,3,4].map(w=>{const r=RAW[w].find(x=>x.name===a.name);return sc(r,w);}).filter(s=>s!=null);
-    const overallScore=weekScores.length?Math.round(weekScores.reduce((s,v)=>s+v,0)/weekScores.length):null;
-    const rank=i+1;
-    const rankHTML=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':`<span class="rank-num">${rank}</span>`;
-    const idx=RAW[lw].findIndex(x=>x.name===a.name);
-    const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
-    const qcls=a.quality!=null?(a.quality>=85?'green':a.quality>=72?'yellow':'red'):'na';
-    return`<tr onclick="openPanel('${a.name}')">
-      <td style="text-align:center;font-size:16px">${rankHTML}</td>
-      <td><div class="agent-cell"><div class="avatar" style="background:${AV[idx%AV.length]}">${init}</div><div><div class="agent-name">${a.name}</div></div></div></td>
-      <td style="text-align:center"><span class="badge ${bc(overallScore)}">${overallScore!=null?overallScore+'%':'N/A'}</span></td>
-      <td>${a.quality!=null?prog(a.quality,100,qcls):'<span class="mv na">N/A</span>'}</td>
-      <td><span class="mv ${cvt(a.ttr,t.ttr)}">${a.ttr!=null?a.ttr+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.fcs,t.fcs)}">${a.fcs!=null?a.fcs+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.airbnb_sla,t.airbnb_sla)}">${a.airbnb_sla!=null?a.airbnb_sla+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.host_appeal,t.host_appeal,true)}">${a.host_appeal!=null?a.host_appeal+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.guest_appeal,t.guest_appeal,true)}">${a.guest_appeal!=null?a.guest_appeal+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.three_contact,t.three_contact,true)}">${a.three_contact!=null?a.three_contact+'%':'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.spd,t.spd)}">${a.spd!=null?a.spd:'N/A'}</span></td>
-      <td><span class="mv ${cvt(a.nps,t.nps)}">${a.nps!=null?a.nps:'N/A'}</span></td>
-      <td style="font-weight:700;text-align:center">${a.closed!=null?a.closed:'—'}</td>
-      <td style="color:var(--muted);text-align:center">${a.assigned!=null?a.assigned:'—'}</td>
-      <td style="text-align:center">${spark(a.name)}</td>
-    </tr>`;
-  }).join('');
+// ── Shared metric list ───────────────────────
+const METRICS=[
+  {k:'quality',      lbl:'Quality',            inv:false,sfx:'%'},
+  {k:'fcs',          lbl:'% 1st Contact SLA',  inv:false,sfx:'%'},
+  {k:'airbnb_sla',   lbl:'Airbnb Resp SLA',    inv:false,sfx:'%'},
+  {k:'ttr',          lbl:'TTR <14d',           inv:false,sfx:'%'},
+  {k:'spd',          lbl:'SPD',                inv:false,sfx:''},
+  {k:'host_appeal',  lbl:'Host Appeal Rate',   inv:true, sfx:'%'},
+  {k:'guest_appeal', lbl:'Guest Appeal Rate',  inv:true, sfx:'%'},
+  {k:'three_contact',lbl:'3+ Contact Rate',    inv:true, sfx:'%'},
+  {k:'nps',          lbl:'Paid Host NPS',      inv:false,sfx:''},
+];
+const WK_LABEL={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22',4:'Jun 23–29'};
+
+function mStatus(val,tgt,inv){
+  if(val==null||tgt==null)return'na';
+  const r=inv?tgt/Math.max(val,.01):val/tgt;
+  return r>=1?'green':r>=.85?'amber':'red';
+}
+function mColor(st){return st==='green'?'var(--green)':st==='amber'?'var(--yellow)':st==='red'?'var(--red)':'var(--muted)';}
+function cohortAvg(wk,k){
+  const vs=RAW[wk].map(a=>a[k]).filter(v=>v!=null);
+  return vs.length?Math.round(vs.reduce((s,v)=>s+v,0)/vs.length*10)/10:null;
+}
+function overallAvg(k){
+  const wkAvgs=[1,2,3,4].map(w=>cohortAvg(w,k)).filter(v=>v!=null);
+  return wkAvgs.length?Math.round(wkAvgs.reduce((s,v)=>s+v,0)/wkAvgs.length*10)/10:null;
 }
 
 // ═══════════════════════════════════
-// SECTION 2: WEEK BY WEEK
+// SECTION 1: OVERALL
 // ═══════════════════════════════════
-let curWbwWk=1;
-function renderWbw(){
-  const weekAvgScores=[1,2,3,4].map(w=>avgSc(w));
-  // Week summary cards
-  document.getElementById('wbw-week-cards').innerHTML=[1,2,3,4].map((w,i)=>{
-    const s=weekAvgScores[i];
-    const prev=i>0?weekAvgScores[i-1]:null;
-    const delta=prev!=null?s-prev:null;
-    const noData=s==null;
-    const dCls=delta==null?'flat':delta>0?'up':'down';
-    const dTxt=delta==null?'&nbsp;':delta>0?`↑ ${delta} pts week on week`:`↓ ${Math.abs(delta)} pts week on week`;
-    const on=noData?'—':RAW[w].filter(a=>{const v=sc(a,w);return v!=null&&v>=80;}).length;
-    const scoreDisplay=noData?'<span style="color:var(--muted);font-size:18px">Pending</span>':`<div class="wsc-score" style="color:${s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)'}">${s}%</div>`;
-    return`<div class="wsc ${w===curWbwWk?'active':''}" onclick="setWbwWeek(null,${w},this)">
-      <div class="wsc-wk">Week ${w}</div>
-      ${scoreDisplay}
-      <div class="wsc-delta ${dCls}">${noData?'No data yet':dTxt}</div>
-      <div class="wsc-agents">${noData?'—':on+' of '+RAW[w].length+' on track'}</div>
+function renderOverall(){
+  const weeksWithData=[1,2,3,4].filter(w=>RAW[w].some(a=>METRICS.some(m=>a[m.k]!=null)));
+  const wLabel=weeksWithData.length===0?'No data yet':
+    weeksWithData.length===1?`Week ${weeksWithData[0]} only`:
+    `Weeks ${weeksWithData[0]}–${weeksWithData[weeksWithData.length-1]}`;
+  document.getElementById('overall-period-hint').textContent=`${wLabel} · cohort avg vs target`;
+  const lw=latestWeek();
+  const badge=(st)=>({
+    green:`<span style="background:var(--green-dim);color:var(--green);border:1px solid rgba(0,212,170,.3);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">✓ On Target</span>`,
+    amber:`<span style="background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(255,184,0,.3);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">⚠ Approaching</span>`,
+    red:  `<span style="background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,106,.3);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">✗ Below Target</span>`,
+    na:   `<span style="background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--border);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">No Data</span>`,
+  }[st]);
+  document.getElementById('overall-metrics-grid').innerHTML=METRICS.map(m=>{
+    const val=overallAvg(m.k);
+    const tgt=T[lw][m.k];
+    const st=mStatus(val,tgt,m.inv);
+    const borderColor=mColor(st);
+    const tgtTxt=tgt==null?'N/A':(m.inv?'≤':'≥')+tgt+m.sfx;
+    return`<div class="card card-pad" style="border-left:3px solid ${borderColor}">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${m.lbl}</div>
+      <div style="font-size:30px;font-weight:800;color:${mColor(st)};letter-spacing:-.5px;margin-bottom:8px">${val!=null?val+m.sfx:'—'}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <span style="font-size:11px;color:var(--muted)">Target: ${tgtTxt}</span>
+        ${badge(st)}
+      </div>
     </div>`;
   }).join('');
-  // Cohort trend chart
-  drawCohortTrend(weekAvgScores);
-  // Week cohort grid
-  renderWbwGrid();
-  // Comparison table
-  renderWbwCompare();
-}
-function setWbwWeek(btn,wk){
-  curWbwWk=wk;
-  if(btn){document.querySelectorAll('.week-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
-  document.querySelectorAll('.wsc').forEach((c,i)=>c.classList.toggle('active',i+1===wk));
-  document.getElementById('wbw-wk-label').textContent=wk;
-  renderWbwGrid();
-}
-function renderWbwGrid(){
-  const t=T[curWbwWk];
-  const defs=[
-    {k:'quality',lbl:'Quality',inv:false,fmt:v=>v+'%',ok:v=>v>=t.quality,tgt:`≥${t.quality}%`},
-    {k:'fcs',lbl:'1st Contact SLA',inv:false,fmt:v=>v+'%',ok:v=>v>=t.fcs,tgt:`≥${t.fcs}%`},
-    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',inv:false,fmt:v=>v+'%',ok:v=>v>=t.airbnb_sla,tgt:`≥${t.airbnb_sla}%`},
-    {k:'host_appeal',lbl:'Host Appeal',inv:true,fmt:v=>v+'%',ok:v=>v<=t.host_appeal,tgt:`≤${t.host_appeal}%`},
-    {k:'guest_appeal',lbl:'Guest Appeal',inv:true,fmt:v=>v+'%',ok:v=>v<=t.guest_appeal,tgt:`≤${t.guest_appeal}%`},
-    {k:'three_contact',lbl:'3+ Contact',inv:true,fmt:v=>v+'%',ok:v=>v<=t.three_contact,tgt:`≤${t.three_contact}%`},
-    {k:'spd',lbl:'SPD',inv:false,fmt:v=>v,ok:v=>v>=t.spd,tgt:`≥${t.spd}`},
-    {k:'nps',lbl:'Paid Host NPS',inv:false,fmt:v=>v,ok:v=>v>=t.nps,tgt:`≥${t.nps}`},
-    ...(t.ttr!=null?[{k:'ttr',lbl:'TTR <14d',inv:false,fmt:v=>v+'%',ok:v=>v>=t.ttr,tgt:`≥${t.ttr}%`}]:[]),
-  ];
-  document.getElementById('wbw-cohort-grid').innerHTML=defs.map(d=>{
-    const val=avg(curWbwWk,d.k);
-    if(val==null) return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:var(--muted)">N/A</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
-    const ok=d.ok(val);
-    return`<div class="mi"><div class="mi-lbl">${d.lbl}</div><div class="mi-val" style="color:${ok?'var(--green)':'var(--red)'}">${d.fmt(val)}</div><div class="mi-tgt">Target: ${d.tgt}</div></div>`;
-  }).join('');
-}
-function renderWbwCompare(){
-  const MDEFS=[
-    {k:'quality',lbl:'Quality',dir:'higher',inv:false,fmt:v=>v+'%'},
-    {k:'ttr',lbl:'TTR <14d',dir:'higher',inv:false,fmt:v=>v+'%'},
-    {k:'fcs',lbl:'1st Contact SLA',dir:'higher',inv:false,fmt:v=>v+'%'},
-    {k:'airbnb_sla',lbl:'Airbnb Resp SLA',dir:'higher',inv:false,fmt:v=>v+'%'},
-    {k:'host_appeal',lbl:'Host Appeal',dir:'lower',inv:true,fmt:v=>v+'%'},
-    {k:'guest_appeal',lbl:'Guest Appeal',dir:'lower',inv:true,fmt:v=>v+'%'},
-    {k:'three_contact',lbl:'3+ Contact',dir:'lower',inv:true,fmt:v=>v+'%'},
-    {k:'spd',lbl:'SPD',dir:'higher',inv:false,fmt:v=>v},
-    {k:'nps',lbl:'Paid Host NPS',dir:'higher',inv:false,fmt:v=>v},
-  ];
-  document.getElementById('wbw-compare-body').innerHTML=MDEFS.map(m=>{
-    const cells=[1,2,3,4].map(w=>{
-      const t=T[w];const tgt=t[m.k];const val=avg(w,m.k);
-      if(val==null||tgt==null){return`<td class="wk-cell"><span class="wk-na">N/A</span></td>`;}
-      const cls=cvt(val,tgt,m.inv);
-      const tgtTxt=m.inv?`Target ≤${tgt}`:m.k==='spd'||m.k==='nps'?`Target ≥${tgt}`:`Target ≥${tgt}%`;
-      return`<td class="wk-cell">
-        <div class="wk-val">
-          <span class="wk-num ${cls}">${m.fmt(val)}</span>
-          <span class="wk-tgt">${tgtTxt}</span>
-        </div>
-      </td>`;
-    });
-    return`<tr><td><div class="metric-name-cell">${m.lbl}<span class="metric-dir">(${m.dir} is better)</span></div></td>${cells.join('')}</tr>`;
-  }).join('');
-}
-function drawCohortTrend(allScores){
-  const svg=document.getElementById('cohort-trend-svg');
-  const W=460,H=160,pL=40,pR=16,pT=24,pB=40;
-  const validPairs=allScores.map((s,i)=>s!=null?{i,s}:null).filter(Boolean);
-  if(validPairs.length<1){svg.innerHTML=`<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="#B0B0B0" font-size="13" font-family="Inter,sans-serif">No data yet</text>`;return;}
-  const validScores=validPairs.map(p=>p.s);
-  const mn=Math.max(0,Math.min(...validScores)-15),mx=Math.min(100,Math.max(...validScores)+15);
-  const px=i=>pL+i*(W-pL-pR)/3;
-  const py=s=>pT+(1-(s-mn)/(mx-mn))*(H-pT-pB);
-  let out='';
-  [50,75,100].forEach(v=>{if(v<mn||v>mx)return;const y=py(v);out+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#E8E8E8" stroke-width="1" stroke-dasharray="4 4"/><text x="${pL-6}" y="${y+4}" font-size="10" fill="#B0B0B0" text-anchor="end" font-family="Inter,sans-serif">${v}</text>`;});
-  const pts=validPairs.map(({i,s})=>`${px(i)},${py(s)}`);
-  const trend=validScores[validScores.length-1]-validScores[0];
-  const col=trend>2?'#00843D':trend<-2?'#C13515':'#B76E00';
-  const light=trend>2?'rgba(0,132,61,.1)':trend<-2?'rgba(193,53,21,.1)':'rgba(183,110,0,.1)';
-  if(validPairs.length>1){
-    out+=`<path d="M${px(validPairs[0].i)},${py(mn)} L${pts.join(' L')} L${px(validPairs[validPairs.length-1].i)},${py(mn)} Z" fill="${light}"/>`;
-    out+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
-  }
-  allScores.forEach((s,i)=>{
-    if(s!=null){
-      out+=`<circle cx="${px(i)}" cy="${py(s)}" r="5" fill="${col}" stroke="white" stroke-width="2"/>`;
-      out+=`<text x="${px(i)}" y="${py(s)-10}" font-size="11" font-weight="700" fill="${col}" text-anchor="middle" font-family="Inter,sans-serif">${s}%</text>`;
-    }
-    out+=`<text x="${px(i)}" y="${H-10}" font-size="11" fill="${s!=null?'#B0B0B0':'#D0D0D0'}" text-anchor="middle" font-family="Inter,sans-serif">Week ${i+1}${s==null?' (pending)':''}</text>`;
-  });
-  svg.innerHTML=out;
 }
 
 // ═══════════════════════════════════
-// SECTION 3: SPECIALIST
+// SECTION 2: WEEK BY WEEK (team)
+// ═══════════════════════════════════
+function renderWbw(){
+  const thStyle='padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--card2);border-bottom:1px solid var(--border);white-space:nowrap;text-align:center';
+  const weeks=[1,2,3,4];
+  document.getElementById('wbw-table').innerHTML=`
+    <thead><tr>
+      <th style="${thStyle};text-align:left;min-width:170px">Metric</th>
+      ${weeks.map(w=>`<th style="${thStyle};min-width:110px">Week ${w}<div style="font-size:9px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:2px">${WK_LABEL[w]}</div></th>`).join('')}
+    </tr></thead>
+    <tbody>${METRICS.map((m,mi)=>`<tr style="${mi%2===1?'background:rgba(255,255,255,.02)':''}">
+      <td style="padding:11px 14px;font-weight:600;font-size:13px">${m.lbl}</td>
+      ${weeks.map(w=>{
+        const t=T[w][m.k],val=cohortAvg(w,m.k);
+        if(val==null)return`<td style="padding:11px 14px;text-align:center"><span style="color:var(--muted);font-size:12px">—</span></td>`;
+        const st=mStatus(val,t,m.inv);
+        const tgtTxt=t==null?'':((m.inv?'≤':'≥')+t+m.sfx);
+        return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)">
+          <div style="font-weight:700;font-size:15px;color:${mColor(st)}">${val}${m.sfx}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${tgtTxt}</div>
+        </td>`;
+      }).join('')}
+    </tr>`).join('')}</tbody>`;
+}
+
+// ═══════════════════════════════════
+// SECTION 3: SPECIALIST VIEW
 // ═══════════════════════════════════
 function renderSpecialist(){
-  const lw=latestWeek();
-  const data=[...RAW[lw]].sort((a,b)=>(sc(b,lw)??-1)-(sc(a,lw)??-1));
-  const scores=data.map(a=>sc(a,lw)).filter(s=>s!=null);
-  const on=scores.filter(s=>s>=80).length, risk=scores.filter(s=>s<65).length;
-  // 3 KPI cards — no avg score
-  const specCardsEl=document.getElementById('spec-cards');
-  specCardsEl.style.gridTemplateColumns='repeat(3,1fr)';
-  specCardsEl.innerHTML=`
-    <div class="sc c0"><div class="sc-icon blue">👥</div><div class="sc-label">Total Specialists</div><div class="sc-value">${data.length}</div><div class="sc-sub">June 2026 cohort</div></div>
-    <div class="sc c2"><div class="sc-icon green">✅</div><div class="sc-label">On Track</div><div class="sc-value" style="color:var(--green)">${on}</div><div class="sc-sub">≥80% this week</div></div>
-    <div class="sc c3"><div class="sc-icon red">⚠️</div><div class="sc-label">Needs Coaching</div><div class="sc-value" style="color:var(--red)">${risk}</div><div class="sc-sub">below 65%</div></div>`;
-  document.getElementById('spec-grid').innerHTML=data.map((a,rank)=>{
-    const s=sc(a,lw);
-    const idx=RAW[lw].findIndex(x=>x.name===a.name);
-    const init=a.name.split(' ').map(n=>n[0]).join('').slice(0,2);
-    const wkScores=[1,2,3,4].map(w=>sc(RAW[w]&&RAW[w][idx],w));
-    const validWkScores=wkScores.filter(v=>v!=null);
-    const trendDelta=validWkScores.length>=2?validWkScores[validWkScores.length-1]-validWkScores[0]:null;
-    const trendTxt=trendDelta==null?'':trendDelta>0?`↑ ${trendDelta}pts`:`↓ ${Math.abs(trendDelta)}pts`;
-    const trendCol=trendDelta==null?'var(--muted)':trendDelta>0?'var(--green)':trendDelta<0?'var(--red)':'var(--muted)';
-    const atRisk=s!=null&&s<65;
-    const sColor=s==null?'var(--muted)':s>=80?'var(--green)':s>=65?'var(--yellow)':'var(--red)';
-    const rankLabel=rank===0?'🥇 Top performer':rank===1?'🥈 2nd':rank===2?'🥉 3rd':`Rank #${rank+1}`;
-    const dots=wkScores.map(ws=>`<div class="spec-wk-dot ${bc(ws)}"></div>`).join('');
-    return`<div class="spec-card" onclick="openPanel('${a.name}')">
-      <div class="spec-header">
-        <div class="spec-avatar" style="background:${AV[idx%AV.length]}">${init}</div>
-        <div style="flex:1">
-          <div class="spec-name">${a.name}</div>
-          <div class="spec-rank">${rankLabel}${atRisk?' · <span style="color:var(--red);font-weight:700">⚠ At Risk</span>':''}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:20px;font-weight:800;color:${sColor}">${s!=null?s+'%':'—'}</div>
-          <div style="font-size:11px;font-weight:600;color:${trendCol}">${trendTxt||'—'}</div>
-        </div>
+  const agentNames=RAW[1].map(a=>a.name);
+  const weeks=[1,2,3,4];
+  const thStyle='padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;background:var(--card2);border-bottom:1px solid var(--border);white-space:nowrap';
+  document.getElementById('spec-body').innerHTML=agentNames.map((name,idx)=>{
+    const color=AV[idx%AV.length];
+    const init=name.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const rows=METRICS.map((m,mi)=>`<tr style="${mi%2===1?'background:rgba(255,255,255,.02)':''}">
+      <td style="padding:11px 14px;font-weight:600;font-size:13px">${m.lbl}</td>
+      ${weeks.map(w=>{
+        const t=T[w][m.k];
+        const a=RAW[w]&&RAW[w][idx];
+        const val=a?a[m.k]:null;
+        if(val==null)return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)"><span style="color:var(--muted);font-size:12px">—</span></td>`;
+        const st=mStatus(val,t,m.inv);
+        const tgtTxt=t==null?'':((m.inv?'≤':'≥')+t+m.sfx);
+        return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)">
+          <div style="font-weight:700;font-size:15px;color:${mColor(st)}">${val}${m.sfx}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${tgtTxt}</div>
+        </td>`;
+      }).join('')}
+    </tr>`).join('');
+    return`<div class="card" style="margin-bottom:20px">
+      <div style="padding:14px 20px;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+        <div class="avatar" style="background:${color};width:38px;height:38px;font-size:13px;flex-shrink:0">${init}</div>
+        <div style="font-size:15px;font-weight:700">${name}</div>
       </div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px">Wk1 / Wk2 per metric vs target</div>
-      ${miniMetricChart(a.name,idx)}
-      <div style="margin:10px 0 0"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Week Progression</div><div class="spec-wk-row">${dots}</div></div>
-      <div class="spec-footer">
-        <span class="spec-footer-txt">${a.closed!=null?a.closed:0} claims closed · ${a.assigned!=null?a.assigned:0} assigned</span>
-        <button class="spec-footer-btn">View detail →</button>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="${thStyle};text-align:left;min-width:170px">Metric</th>
+            ${weeks.map(w=>`<th style="${thStyle};text-align:center;min-width:110px">Week ${w}<div style="font-size:9px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:2px">${WK_LABEL[w]}</div></th>`).join('')}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
     </div>`;
   }).join('');
-  // Render comparison chart section
-  renderSpecCompChart(lw);
-}
-let specCompWk=null;
-function renderSpecCompChart(wk){
-  specCompWk=wk||latestWeek();
-  const filtersEl=document.getElementById('spec-wk-filters');
-  if(filtersEl){
-    filtersEl.innerHTML=[1,2,3,4].map(w=>{
-      const hasData=RAW[w].some(a=>a.quality!=null||a.fcs!=null||a.airbnb_sla!=null||a.ttr!=null);
-      return hasData?`<button class="wf-btn ${w===specCompWk?'active':''}" onclick="renderSpecCompChart(${w})">Week ${w}</button>`:'';
-    }).join('');
-  }
-  drawAgentVsTargetChart('spec-comp-chart',specCompWk);
 }
 
 // ═══════════════════════════════════
@@ -829,7 +625,6 @@ function showSection(id,btn){
   document.querySelectorAll('.sec-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
   btn.classList.add('active');
-  document.getElementById('week-nav').style.display=id==='wbw'?'flex':'none';
 }
 
 // ═══════════════════════════════════
