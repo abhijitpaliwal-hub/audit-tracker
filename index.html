@@ -319,10 +319,9 @@ tbody td{padding:12px 14px;vertical-align:middle;color:var(--text);}
   ════════════════════════════ -->
   <section class="section" id="sec-metricaudit">
     <div class="sechdr" style="margin-bottom:6px">
-      <h2>Metric Audit — Missed Targets</h2>
-      <span class="hint">Auto-detected from data · Add case IDs and reasons inline</span>
+      <h2>Metric Audit</h2>
+      <span class="hint">Add case IDs and notes inline · saved locally</span>
     </div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Only metrics below their weekly target are shown. Cases and Reason fields are editable and saved locally.</p>
     <div id="metric-audit-body"></div>
   </section>
 
@@ -968,12 +967,10 @@ function renderMetricAudit(){
           <td style="text-align:center;color:var(--muted);font-size:12px">${tgtTxt}</td>
           <td style="text-align:center">${statusCell}</td>
           <td colspan="2" style="min-width:380px">
-            ${missed||note.cases?`
             <input class="audit-input" placeholder="Case IDs, comma-separated…" value="${(note.cases||'').replace(/"/g,'&quot;')}"
               style="width:100%"
               oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value);updateCaseNoteRows(this,'${name.replace(/'/g,"\\'")}',${wk},'${m.k}')"/>
-            <div class="case-note-rows">${caseNoteRowsHtml(name,wk,m.k,note.cases||'',note.caseNotes)}</div>`
-            :`<span style="color:var(--muted);font-size:11px;font-style:italic">Data not available</span>`}
+            <div class="case-note-rows">${caseNoteRowsHtml(name,wk,m.k,note.cases||'',note.caseNotes)}</div>
           </td>
         </tr>`;
       }).join('');
