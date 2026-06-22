@@ -541,6 +541,14 @@ const METRICS=[
 ];
 const WK_LABEL={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22',4:'Jun 23–29'};
 
+// ── MOM tab cohort data (source of truth for Overall + WBW) ──
+const COHORT_DATA={
+  1:{quality:92.46, ttr:90,   fcs:73.3, airbnb_sla:98.4, host_appeal:33.3, guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:31},
+  2:{quality:null,  ttr:94.1, fcs:60.9, airbnb_sla:96.9, host_appeal:null,  guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:32},
+  3:null,
+  4:null,
+};
+
 function mStatus(val,tgt,inv){
   if(val==null||tgt==null)return'na';
   const r=inv?tgt/Math.max(val,.01):val/tgt;
@@ -548,6 +556,8 @@ function mStatus(val,tgt,inv){
 }
 function mColor(st){return st==='green'?'var(--green)':st==='amber'?'var(--yellow)':st==='red'?'var(--red)':'var(--muted)';}
 function cohortAvg(wk,k){
+  // Use MOM tab cohort data when available, fall back to per-agent average
+  if(COHORT_DATA[wk]&&COHORT_DATA[wk][k]!=null)return COHORT_DATA[wk][k];
   const vs=RAW[wk].map(a=>a[k]).filter(v=>v!=null);
   return vs.length?Math.round(vs.reduce((s,v)=>s+v,0)/vs.length*10)/10:null;
 }
