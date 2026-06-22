@@ -642,7 +642,7 @@ function renderSpecialist(){
         const t=T[w][m.k];
         const a=RAW[w]&&RAW[w][idx];
         const val=a?a[m.k]:null;
-        if(val==null)return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)"><span style="color:var(--muted);font-size:12px">—</span></td>`;
+        if(val==null)return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)"><span style="color:var(--muted);font-size:11px;font-style:italic">Data not available</span></td>`;
         const st=mStatus(val,t,m.inv);
         const tgtTxt=t==null?'':((m.inv?'≤':'≥')+t+m.sfx);
         return`<td style="padding:11px 14px;text-align:center;border-left:1px solid var(--border)">
