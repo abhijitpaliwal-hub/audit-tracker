@@ -541,12 +541,19 @@ const METRICS=[
 ];
 const WK_LABEL={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22',4:'Jun 23–29'};
 
-// ── MOM tab cohort data (source of truth for Overall + WBW) ──
+// ── MOM tab cohort data (source of truth for WBW) ──
 const COHORT_DATA={
   1:{quality:92.46, ttr:90,   fcs:73.3, airbnb_sla:98.4, host_appeal:33.3, guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:31},
   2:{quality:null,  ttr:94.1, fcs:60.9, airbnb_sla:96.9, host_appeal:null,  guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:32},
   3:null,
   4:null,
+};
+
+// ── MOM tab cumulative data (source of truth for Overall tab) ──
+const CUMULATIVE={
+  quality:92.46, ttr:91.9, fcs:67.9, airbnb_sla:97.6,
+  host_appeal:16.7, guest_appeal:null, spd:0.2,
+  three_contact:null, nps:null, closed:6, assigned:63,
 };
 
 function mStatus(val,tgt,inv){
@@ -562,8 +569,8 @@ function cohortAvg(wk,k){
   return vs.length?Math.round(vs.reduce((s,v)=>s+v,0)/vs.length*10)/10:null;
 }
 function overallAvg(k){
-  const wkAvgs=[1,2,3,4].map(w=>cohortAvg(w,k)).filter(v=>v!=null);
-  return wkAvgs.length?Math.round(wkAvgs.reduce((s,v)=>s+v,0)/wkAvgs.length*10)/10:null;
+  if(CUMULATIVE[k]!=null)return CUMULATIVE[k];
+  return null;
 }
 
 // ═══════════════════════════════════
