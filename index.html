@@ -413,9 +413,9 @@ const FALLBACK={
     {name:'Arushi Rajput',  quality:91.67,ttr:75,  fcs:72.7, airbnb_sla:100,  host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:10},
   ],
   2:[
-    {name:'Varun Shukla',   quality:null, ttr:100,  fcs:28.6, airbnb_sla:94.4, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:10},
-    {name:'Pratyush Shahi', quality:null, ttr:100,  fcs:75,   airbnb_sla:76.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:0.7,  nps:null, closed:3,    assigned:9},
-    {name:'Arushi Rajput',  quality:null, ttr:85.7, fcs:60,   airbnb_sla:93.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:13},
+    {name:'Varun Shukla',   quality:100,   ttr:100,  fcs:28.6, airbnb_sla:94.4, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:10},
+    {name:'Pratyush Shahi', quality:92.86, ttr:100,  fcs:75,   airbnb_sla:76.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:0.7,  nps:null, closed:3,    assigned:9},
+    {name:'Arushi Rajput',  quality:100,   ttr:85.7, fcs:60,   airbnb_sla:93.9, host_appeal:null, guest_appeal:null, three_contact:null, spd:null, nps:null, closed:null, assigned:13},
   ],
   3:[
     {name:'Varun Shukla',   quality:null,ttr:null,fcs:null,airbnb_sla:null,host_appeal:null,guest_appeal:null,three_contact:null,spd:null,nps:null,closed:null,assigned:null},
@@ -544,14 +544,14 @@ const WK_LABEL={1:'Jun 2–8',2:'Jun 9–15',3:'Jun 16–22',4:'Jun 23–29'};
 // ── MOM tab cohort data (source of truth for WBW) ──
 const COHORT_DATA={
   1:{quality:92.46, ttr:90,   fcs:73.3, airbnb_sla:98.4, host_appeal:33.3, guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:31},
-  2:{quality:null,  ttr:94.1, fcs:60.9, airbnb_sla:96.9, host_appeal:null,  guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:32},
+  2:{quality:97.62, ttr:94.1, fcs:60.9, airbnb_sla:96.9, host_appeal:null,  guest_appeal:null, spd:0.2, three_contact:null, nps:null, closed:3,  assigned:32},
   3:null,
   4:null,
 };
 
 // ── MOM tab cumulative data (source of truth for Overall tab) ──
 const CUMULATIVE={
-  quality:null, ttr:91.9, fcs:67.9, airbnb_sla:97.6,
+  quality:95.04, ttr:91.9, fcs:67.9, airbnb_sla:97.6,
   host_appeal:16.7, guest_appeal:null, spd:0.2,
   three_contact:null, nps:null, closed:6, assigned:63,
 };
@@ -880,6 +880,37 @@ function saveAuditNote(agent,wk,metric,field,value){
   all[k]=all[k]||{};all[k][field]=value;
   localStorage.setItem(AUDIT_KEY,JSON.stringify(all));
 }
+function saveCaseNote(agent,wk,metric,caseId,value){
+  const all=loadAuditNotes();
+  const k=`${agent}__${wk}__${metric}`;
+  all[k]=all[k]||{};
+  all[k].caseNotes=all[k].caseNotes||{};
+  if(value.trim())all[k].caseNotes[caseId]=value;
+  else delete all[k].caseNotes[caseId];
+  localStorage.setItem(AUDIT_KEY,JSON.stringify(all));
+}
+function caseNoteRowsHtml(name,wk,metric,casesStr,caseNotes){
+  const cases=(casesStr||'').split(/[,\n]+/).map(c=>c.trim()).filter(Boolean);
+  if(!cases.length)return'';
+  const sn=name.replace(/'/g,"\\'");
+  return cases.map(cId=>{
+    const noteVal=(caseNotes&&caseNotes[cId])||'';
+    const sc=cId.replace(/'/g,"\\'");
+    return`<div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+      <span style="font-size:11px;font-family:monospace;color:var(--teal);white-space:nowrap;min-width:130px;flex-shrink:0">${cId}</span>
+      <input class="audit-input" placeholder="Notes for this case…" value="${noteVal.replace(/"/g,'&quot;')}"
+        style="flex:1;min-width:0"
+        oninput="saveCaseNote('${sn}',${wk},'${metric}','${sc}',this.value)"/>
+    </div>`;
+  }).join('');
+}
+function updateCaseNoteRows(el,name,wk,metric){
+  const notes=loadAuditNotes();
+  const k=`${name}__${wk}__${metric}`;
+  const note=notes[k]||{};
+  const rowsEl=el.parentNode.querySelector('.case-note-rows');
+  if(rowsEl)rowsEl.innerHTML=caseNoteRowsHtml(name,wk,metric,el.value,note.caseNotes);
+}
 
 const AUDIT_METRICS=[
   {k:'quality',      lbl:'Quality',            inv:false,sfx:'%', ph:'e.g. 87.5'},
@@ -936,8 +967,14 @@ function renderMetricAudit(){
           </td>
           <td style="text-align:center;color:var(--muted);font-size:12px">${tgtTxt}</td>
           <td style="text-align:center">${statusCell}</td>
-          <td><input class="audit-input" placeholder="${missed?'Case IDs (e.g. CS-12345)':'—'}" value="${(note.cases||'').replace(/"/g,'&quot;')}" ${!missed&&!note.cases?'style="opacity:.4"':''} oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value)"/></td>
-          <td><input class="audit-input" placeholder="${missed?'Reason for missing target…':'—'}" value="${(note.reason||'').replace(/"/g,'&quot;')}" ${!missed&&!note.reason?'style="opacity:.4"':''} oninput="saveAuditNote('${name}',${wk},'${m.k}','reason',this.value)"/></td>
+          <td colspan="2" style="min-width:380px">
+            ${missed||note.cases?`
+            <input class="audit-input" placeholder="Case IDs, comma-separated…" value="${(note.cases||'').replace(/"/g,'&quot;')}"
+              style="width:100%"
+              oninput="saveAuditNote('${name}',${wk},'${m.k}','cases',this.value);updateCaseNoteRows(this,'${name.replace(/'/g,"\\'")}',${wk},'${m.k}')"/>
+            <div class="case-note-rows">${caseNoteRowsHtml(name,wk,m.k,note.cases||'',note.caseNotes)}</div>`
+            :`<span style="color:var(--muted);font-size:11px;font-style:italic">Data not available</span>`}
+          </td>
         </tr>`;
       }).join('');
       return`<div class="audit-wk-block">
@@ -953,8 +990,7 @@ function renderMetricAudit(){
               <th class="center" style="min-width:110px">Score <span style="font-weight:400;text-transform:none;font-size:9px">(editable)</span></th>
               <th class="center">Target</th>
               <th class="center">Status</th>
-              <th style="min-width:170px">Cases</th>
-              <th style="min-width:220px">Reason</th>
+              <th style="min-width:380px" colspan="2">Cases &amp; Notes</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
